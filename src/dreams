@@ -1,0 +1,32 @@
+An expression was expected after '('.
+At line:5 char:22
++         A[:, 2].mean(), A[:, 2].std(),
++                      ~
+An expression was expected after '('.
+At line:5 char:37
++         A[:, 2].mean(), A[:, 2].std(),
++                                     ~
+An expression was expected after '('.
+At line:6 char:22
++         A[:, 3].mean(),
++                      ~
+An expression was expected after '('.
+Not all parse errors were reported.  Correct the reported errors and try again.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : MissingEndParenthesisInMethodCall
+PS C:\Users\Bo\projects\neuromorphic-sandbox>
+PS C:\Users\Bo\projects\neuromorphic-sandbox> print("\n" + "=" * 70)
+Unable to initialize device PRN
+PS C:\Users\Bo\projects\neuromorphic-sandbox> print("The decisive comparison:")
+Unable to initialize device PRN
+PS C:\Users\Bo\projects\neuromorphic-sandbox> print("  Arms 1,2: Exp 21 replication (never crosses)")
+Unable to initialize device PRN
+PS C:\Users\Bo\projects\neuromorphic-sandbox> print("  Arm 3 vs 1,2: does CONFRONTATION (old-at-zero) demolish the empire?")
+No file to print
+PS C:\Users\Bo\projects\neuromorphic-sandbox> print("    If cross appears in Arm 3 where 1,2 show 'never' -> confirmed:")
+Unable to initialize device PRN
+PS C:\Users\Bo\projects\neuromorphic-sandbox> print("    disillusionment must be computed, not merely replaced.")
+Unable to initialize device PRN
+PS C:\Users\Bo\projects\neuromorphic-sandbox> print("  Arm 4 vs 3: does gas geometry accelerate the confrontation?")
+No file to print
+PS C:\Users\Bo\projects\neuromorphic-sandbox> print("\nBring this back to Grok.")
