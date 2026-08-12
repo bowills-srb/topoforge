@@ -1,0 +1,20 @@
+{
+    "hardware": {
+        "cores_x": 8,
+        "cores_y": 8,
+        "neurons_per_core": 15
+    },
+    "neuron_types": 5,
+    "associations": [
+        {"types": [0, 3], "reward": 1.0, "label": "primary pattern"},
+        {"types": [1, 4], "reward": 0.0, "label": "secondary pattern"},
+        {"types": [2], "reward": -1.0, "label": "noise"}
+    ],
+    "test": {
+        "strategies": ["segregated", "interleaved", "random"],
+        "seeds": 5,
+        "steps_frozen": 400,
+        "steps_plastic": 400,
+        "steps_reversal": 400
+    }
+}
