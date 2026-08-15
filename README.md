@@ -1,69 +1,75 @@
-# Neuromorphic Sandbox
+# TopoForge
 
-A spiking neural network simulation framework for exploring spatial topology in AI computing.
+**Placement affects learning.** On plastic neuromorphic hardware, the physical assignment of neurons to cores determines not just communication energy but what the network can learn. Every existing mapping tool optimizes for the first thing. Nobody has published on the second — until now.
 
-## Quick Start
+**Headline result:** Wire-length-optimized segregated placement (the standard output of every current mapping tool) produces a **4.0x learning penalty** compared to interleaved placement, with **zero energy penalty** during frozen inference. Consistent from N=900 to N=5,000, 10 seeds each.
 
-Navigate to the project and activate the virtual environment:
+📄 Preprint: `[arXiv link pending]`
+⚖️ Patent: Provisional filed, USPTO application #64/134,008 (08/14/2026)
 
-```powershell
-cd C:\Users\Bo\projects\neuromorphic-sandbox
-.\venv\Scripts\Activate.ps1
+---
+
+## Run the benchmark yourself
+
+```bash
+git clone https://github.com/bowills-srb/topoforge.git
+cd topoforge
+pip install numpy
+
+python src/topoforge_run.py
 ```
 
-Then run Jupyter Lab:
+Takes about 90 seconds. You'll see three placement strategies compared on learning quality, wire energy, and adaptation after a workload change, with a plain-language recommendation at the end.
 
-```powershell
-jupyter lab
+## Test your own placement strategy
+
+```bash
+python src/topoforge_run.py your_config.json --custom your_placement.csv
 ```
 
-Open your browser to `http://localhost:8888`
+Your placement CSV needs columns: `neuron_id, x, y, cluster_identity`. See `src/example_config.json` for the hardware-spec format.
 
-## Project Structure
+---
 
-- `src/` - Core simulation code
-  - `simulation.py` - SNN simulator
-  - `topology.py` - Spatial arrangement tools
-  - `analysis.py` - Efficiency metrics
-- `experiments/` - Jupyter notebooks for experiments
-- `notebooks/` - Exploration notebooks
-- `data/` - Simulation results and data
+## What's in this repo
 
-## Key Concepts
+| Path | What it is |
+|---|---|
+| `src/topoforge_run.py` | The CLI — describe your hardware, get a placement recommendation |
+| `src/spatial.py` | Exact k-NN spatial grid, O(N) queries |
+| `src/sparse_state.py` | Lazy-decay pairwise state (the memory-efficient trick that makes N=100K+ tractable) |
+| `src/engine.py`, `engine_local.py`, `engine_fast.py` | The simulation core — LIF neurons, structural plasticity, RPE learning |
+| `src/experiments/` | All 34 experiments, numbered, each independently runnable |
+| `src/exp32b_benchmark.py` | The Placement-Learning Benchmark (PLB) — the headline result |
+| `neuromorphic_sandbox_report.md` | Original research report (Experiments 1–11) |
+| `neuromorphic_sandbox_addendum.md` | Addendum (Experiments 12–19d, audit results, revised synthesis) |
+| `topoforge_preprint.md` | Full paper draft |
 
-### Spatial Topology
-This framework explores how physical arrangement of neurons affects computational efficiency, inspired by brain architecture.
+## The three findings, in one paragraph each
 
-### Spiking Neural Networks (SNNs)
-Event-driven neural computation where neurons fire spikes based on membrane potential.
+**Placement.** Segregating neurons by function (the intuitive, wire-length-optimal choice) puts correlated partners beyond the reach of local plasticity rules — some associations become structurally impossible to learn. Interleaving avoids this at negligible energy cost. See `exp32b_benchmark.py`.
 
-## Next Steps
+**Persistence.** Three independent parameter sweeps (value-decay rate, correlation weight, edge turnover rate — `exp26` through `exp28`) show that none of them control how durably a network retains learned structure after its environment changes. Persistence is earned by the value hierarchy and defended by structural inertia — not tunable by any single constant.
 
-1. Activate venv: `.\venv\Scripts\Activate.ps1`
-2. Start Jupyter: `jupyter lab`
-3. Create a new Python notebook
-4. Import and experiment:
+**Detection.** Spatially coherent anomalies (Experiments 29–31) produce 4.7x more local correlation structure than scattered noise, discriminated by trajectory shape over time, at zero additional computational cost. The substrate's own geometry performs anomaly detection without a separate algorithm.
 
-```python
-from src.simulation import BasicNeuromorphicSim
-from src.topology import TopologyGenerator
+## Status
 
-# Create and run a simulation
-sim = BasicNeuromorphicSim(n_neurons=5000)
-sim.create_network()
-results = sim.run(duration=1.0)
-print(f"Firing rate: {results['firing_rate']:.2f} Hz")
+Built by one person on a laptop, in active development. 34 experiments, 5-seed-minimum replication on primary claims, GRANITE audit passed on both the original dense engine and the sparse rewrite. Numba optimization and cloud-scale runs (N=10K–100K) planned next.
+
+## Citing this work
+
+```
+@misc{wills2026topoforge,
+  title={Placement Affects Learning: Spatial Topology as a First-Class
+         Design Variable for Plastic Neuromorphic Hardware},
+  author={Wills, Bo},
+  year={2026},
+  note={Provisional patent filed, USPTO \#64/134,008},
+  url={https://github.com/bowills-srb/topoforge}
+}
 ```
 
-## Dependencies
+## Contact
 
-- Brian2: Spiking neural network simulator
-- NumPy/SciPy: Numerical computation
-- PyTorch: Machine learning integration
-- Matplotlib: Visualization
-- Jupyter: Interactive notebooks
-
-## Resources
-
-- Brian2 docs: https://brian2.readthedocs.io/
-- Neuromorphic computing: Nature Communications papers
+Bo Wills — issues and PRs welcome. For collaboration inquiries, open an issue or reach out directly.
