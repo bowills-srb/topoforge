@@ -336,12 +336,45 @@ trusted, rather than defending it.*
 
 **Baseline fidelity.** Our "segregated" placement condition is our
 own implementation of a wire-length-minimizing heuristic, not the
-measured output of a published mapping tool run on our specific task.
-We have not benchmarked against actual SpiNeMap or NEUTRAMS output.
-It remains possible that real mapping tools, which typically optimize
-multiple objectives simultaneously rather than pure wire-length,
-produce placements less pathological than our deliberately
-type-segregated baseline.
+output of a published mapping tool. To close this gap we implemented
+the actual algorithm of SpiNeMap (Balaji et al., arXiv:1909.01843) —
+which has no public code release — from its published description:
+greedy Kernighan-Lin clustering (SpiNeCluster) followed by
+particle-swarm placement (SpiNePlacer), both written from scratch and
+verified before use (the partitioner reaches the theoretical minimum
+cut on the benchmark graph and matches networkx's bisection; the
+placer reduces wire energy to 0.42-0.46x of random assignment). We
+ran it through the same Placement-Learning Benchmark (Experiment 38,
+ten seeds). The result runs against the intuition that any
+wire-length-optimizing tool segregates: SpiNeMap does *not* reproduce
+our pathological baseline. It produces 2,604-2,678 units of learned
+structure (depending on the connectivity graph supplied) versus 686
+for our segregated condition and 2,926 for interleaved — that is,
+86-89% of the way from segregated to interleaved, and roughly four
+times the learned structure of our own segregated baseline. Our
+hand-rolled baseline is therefore *more* pathological than a real
+tool, and the 4x figure should be read as the penalty a naive
+type-segregation incurs, not the penalty a deployed mapper like
+SpiNeMap would produce.
+
+This sharpens rather than overturns the central claim. The penalty
+attaches to spatial *segregation of functionally correlated neurons*
+specifically, not to wire-length optimization in the abstract.
+SpiNeMap minimizes global communication by compacting each population;
+at our core pitch (equal to the plasticity radius) that compaction
+leaves correlated cross-type neurons within reach, so associations
+still form. A tool incurs the penalty only insofar as its output
+spreads correlated populations beyond the plasticity radius — which
+our block-segregated heuristic does and SpiNeMap, at this scale, does
+not. We tested both the pre-plasticity case (SpiNeMap given only the
+population structure realistically available before learning) and the
+associations-declared case (the target connectivity supplied up
+front); both land near interleaved, so the conclusion does not hinge
+on that modeling choice. The result is geometry-dependent, however: on
+a sparser fabric, or with inter-core distances large relative to the
+plasticity radius, even a communication-minimizing placer could
+separate populations enough to re-incur the penalty. Quantifying that
+crossover is future work.
 
 **Task and scale realism.** All synthetic results (Sections 4.1-4.4)
 use hand-designed stimulus patterns at N=900-5,000. Experiment 33's

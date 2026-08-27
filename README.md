@@ -2,7 +2,9 @@
 
 **Placement affects learning.** On plastic neuromorphic hardware, the physical assignment of neurons to cores determines not just communication energy but what the network can learn. Every existing mapping tool optimizes for the first thing. Nobody has published on the second - until now.
 
-**Headline result:** Wire-length-optimized segregated placement (the standard output of every current mapping tool) produces a **4.0x learning penalty** compared to interleaved placement, with **zero energy penalty** during frozen inference. Consistent from N=900 to N=5,000, 10 seeds each.
+**Headline result:** Segregated placement — grouping functionally-correlated neurons into separate cores — produces a **4.0x learning penalty** compared to interleaved placement, with **zero energy penalty** during frozen inference. Consistent from N=900 to N=5,000, 10 seeds each.
+
+The penalty is a property of *segregation specifically*, not wire-length optimization in general: a faithful from-scratch reimplementation of SpiNeMap (a real mapping tool) compacts populations rather than segregating them, and lands near interleaved — ~4x better than our segregated baseline. See `src/experiments/exp38_spinemap_baseline.py` and the preprint's Limitations.
 
 **Real-data generalization:** the same penalty appears on real spike-encoded human speech (Spiking Heidelberg Digits). A 12-seed, adjacency-matched comparison shows a **3.6x–7.3x** penalty depending on training-exposure regime (7.25x, 95% CI [5.05x, 11.48x], at the validated regime; Welch p = 3.2×10⁻¹⁴). See `src/experiments/exp37c_real_data_scaled.py`.
 
