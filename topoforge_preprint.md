@@ -26,8 +26,10 @@ versus-global connectivity rather than spatial embedding specifically);
 replication on a network sized to a published hardware architecture's
 own proportions; and, most consequentially, replication on real
 spike-encoded human speech (Spiking Heidelberg Digits), where an
-adjacency-matched placement comparison shows a 9.31x learning penalty
-for segregated placement. We report effect sizes, statistical tests,
+adjacency-matched, twelve-seed comparison shows a segregated-placement
+learning penalty of roughly 3.6x-7.3x depending on training-exposure
+regime (7.25x, 95% CI [5.05x, 11.48x], at the validated regime;
+Welch p = 3.2×10⁻¹⁴). We report effect sizes, statistical tests,
 and — in a dedicated Limitations section — the specific respects in
 which this evidence should and should not be trusted at its current
 stage.
