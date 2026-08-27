@@ -296,29 +296,13 @@ so an initial large ratio (over 1,000x) reflected mismatched
 opportunity rather than a difference in learning arising from
 arrangement alone.
 
-Correcting both issues — matching the decay rate to the life length,
-and placing both conditions in matched geometry (same disc, same
-neuron density, differing only in whether functional types occupy
-contiguous wedges or are shuffled) — yields an adjacency-matched
-comparison: segregated placement produces 493.6 +/- 208.6 units of
-input-output structural bridging; interleaved placement produces
-4596.5 +/- 395.9. Ratio: 9.31x. Adjacency itself differs by only 1.9x
-between conditions (1,198 versus 2,268 adjacent pairs), confirming
-the learning-quality penalty substantially exceeds the raw
-opportunity penalty — segregation is not merely providing fewer
-chances to learn, but making comparatively poor use of the chances it
-does provide.
+Correcting both issues — matching the decay rate to the life length, and placing both conditions in matched geometry (same disc, same neuron density, differing only in whether functional types occupy contiguous wedges or are shuffled) — yields an adjacency-matched comparison. At the validated life-length/decay regime (approximately 8,600 steps, V retention 0.651), segregated placement produces a mean bridge mass of 1161 ± 822 across twelve seeds; interleaved placement produces 8423 ± 1089. Ratio: 7.25x, bootstrap 95% CI [5.05x, 11.48x]. Welch's t-test: p = 3.2×10⁻¹⁴; a non-parametric Wilcoxon signed-rank test, which does not assume normality, independently confirms significance (p = 4.9×10⁻⁴); Cohen's d = 7.53.
 
-We report two further honest caveats. First, segregated-condition
-variance is markedly higher (+/-42% relative) than interleaved
-(+/-8.6%), itself a reportable finding — segregation appears to make
-learning outcomes substantially more seed-dependent — but it also
-means the 9.31x point estimate should be read as an order-of-magnitude
-claim, not a precise ratio. Second, 9.31x exceeds the 3.8-4.0x
-observed on synthetic data; we consider it plausible that real
-speech's richer correlational structure gives interleaved placement
-more genuine signal to exploit than our synthetic patterns provided,
-but this is a hypothesis this result does not itself establish.
+To isolate whether this magnitude depends on the number of distinct real samples used, we compared two configurations at the identical validated regime: four samples per class repeated across five exposure epochs (the original configuration, reproducing at 7.22x on independent re-verification) against twenty distinct samples per class seen once each. The two configurations produce statistically indistinguishable ratios (7.22x versus 7.25x), directly showing that sample diversity is not the driver of the effect — a five-fold increase in distinct real examples changes nothing.
+
+The magnitude does depend on the training-exposure regime itself: extending exposure to two epochs (approximately 17,200 steps, V retention 0.42) compresses the ratio to 3.62x, 95% CI [2.70x, 5.42x] (still highly significant: p = 1.3×10⁻⁷, Wilcoxon p confirms, d = 4.9). We report both regimes rather than selecting one: the honest range for this effect on real speech data is approximately 3.6x to 7.3x depending on training exposure, with both endpoints comfortably bracketing the 3.8-4.0x observed on synthetic data in Section 4.1.
+
+We report one further honest caveat, quantified more precisely now than in earlier drafts of this work. Segregated-condition variance remains high (relative standard deviation 60-70%) regardless of seed count — adding more seeds revealed this variance rather than shrinking it, and two of twelve seeds in the longer-exposure regime produced bridge mass of essentially zero. We read this as a real, reportable property of segregated placement rather than measurement noise: segregation does not merely reduce average learning, it makes learning outcomes substantially less reliable across runs. A hardware designer choosing between placement strategies should weigh this reliability difference alongside the mean effect.
 
 ---
 
@@ -384,14 +368,7 @@ structural plasticity, limiting near-term hardware validation to an
 inference-only comparison that cannot test the central claim
 directly.
 
-**Real-data result variance and scope.** The Section 4.5 real-data
-result rests on a two-class discrimination task with four examples
-per class — a genuinely small dataset by the standards of a
-full evaluation, chosen to keep computation tractable during rapid
-iterative debugging. The high variance in the segregated condition
-(+/-42% relative) means the specific 9.31x figure should be treated
-as an order-of-magnitude claim pending a larger, more thoroughly
-cross-validated real-data evaluation.
+**Real-data result variance and scope.** The Section 4.5 real-data result was strengthened after initial drafting: a twelve-seed, twenty-distinct-sample-per-class replication directly tested and rejected the concern that four examples per class was too narrow a sample — five-fold more distinct data produced a statistically indistinguishable ratio. The remaining open question is not sample size but training-exposure regime: reported magnitude ranges from 3.6x to 7.3x depending on how long the network is exposed before readout, and segregated-condition outcomes remain intrinsically high-variance (60-70% relative) even at n=12. We consider the direction of this result — segregation harms real-data learning, substantially and reliably — solidly established; the precise magnitude should still be read as regime-dependent rather than as a single fixed number.
 
 ---
 
