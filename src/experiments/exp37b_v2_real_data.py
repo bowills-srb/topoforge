@@ -1,4 +1,17 @@
 """Exp 37b (v2): Placement effect on REAL SHD data.
+
+UPDATE -- superseded by Exp 37c (exp37c_real_data_scaled.py):
+This exact config (4 samples/class x 5 epochs, 5 seeds) reproduces at
+7.22x on fresh re-verification, NOT the 9.31x quoted in this file's
+commit message. That 9.31x was a lucky small-sample draw of the specific
+4 samples and does not reproduce from the committed code (adjacency and
+V retention match the commit exactly; only the ratio differs). Exp 37c
+re-runs at n=12 with 20 distinct samples/class and confirms the effect
+is NOT a small-sample artifact: 7.25x [5.05x, 11.48x] at this same
+life/decay regime, p < 1e-8. The magnitude is regime-dependent (honest
+range ~3.6x-7.3x with training exposure), not a single fixed number.
+This experiment is kept as the validated run-loop Exp 37c imports.
+
 Rebuilt directly from diagnose_exp37e.py, whose run-loop is PROVEN to
 produce healthy, stable bridge mass (~720-765) across all 15 epochs.
 The previous version had a broken indentation: the rewire block and
