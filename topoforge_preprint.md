@@ -312,6 +312,38 @@ The magnitude does depend on the training-exposure regime itself: extending expo
 
 We report one further honest caveat, quantified more precisely now than in earlier drafts of this work. Segregated-condition variance remains high (relative standard deviation 60-70%) regardless of seed count — adding more seeds revealed this variance rather than shrinking it, and two of twelve seeds in the longer-exposure regime produced bridge mass of essentially zero. We read this as a real, reportable property of segregated placement rather than measurement noise: segregation does not merely reduce average learning, it makes learning outcomes substantially less reliable across runs. A hardware designer choosing between placement strategies should weigh this reliability difference alongside the mean effect.
 
+### 4.6 Generalization test 4: a real mapping tool (SpiNeMap)
+
+The preceding three tests stress the effect itself; this one addresses a different objection — that our "segregated" condition is a baseline we constructed rather than the output of a mapping tool anyone deploys. SpiNeMap (Balaji et al., arXiv:1909.01843) releases no code, so we implemented its published two-step algorithm from scratch: **SpiNeCluster**, a greedy Kernighan-Lin partitioning that minimizes inter-cluster (global) synapse count with clusters sized to a core's capacity; and **SpiNePlacer**, a particle-swarm optimization that assigns clusters to physical cores to minimize communication cost. Both were validated before use, per this project's audit-before-trust convention: the partitioner reaches the theoretical minimum cut on the benchmark graph and matches networkx's independent Kernighan-Lin bisection, and the placer reduces wire energy to 0.42-0.46x of a random assignment. We then ran SpiNeMap's placement through the identical Placement-Learning Benchmark, ten seeds, alongside our three hand-built conditions.
+
+Because a plastic network's cross-type associations do not exist as synapses until they are learned, the connectivity graph a mapper is given matters, and we tested both bounds: a **population** graph (intra-type synapses only — the structure realistically known before plasticity) and a **functional** graph (additionally including the to-be-learned association synapses — an upper bound rarely available in practice).
+
+A structural audit before any learning confirms the placements differ as intended (Table 3): our segregated baseline places none of each source type's neurons within the plasticity radius of an associated partner, whereas both SpiNeMap variants place essentially all of them there — indistinguishable from interleaved and random on this measure.
+
+**Table 3.** Fraction of source-type neurons with an associated-partner neuron within the plasticity radius, before learning (N=900).
+
+| Placement | 0→3 | 1→4 |
+|---|---|---|
+| Random | 100.0% | 100.0% |
+| Segregated (ours) | 0.0% | 0.0% |
+| Interleaved (ours) | 100.0% | 100.0% |
+| SpiNeMap — population graph | 98.9% | 98.9% |
+| SpiNeMap — functional graph | 99.4% | 100.0% |
+
+Learning quality follows that structure (Table 4). Both SpiNeMap variants land 86-89% of the way from our segregated baseline toward interleaved — among the good conditions, not the pathological one — producing roughly four times the learned structure of our segregated condition (Cohen's d ≈ 47-54 against segregated, of the low-noise character discussed in Section 3.4). The result is robust to the graph supplied (both variants land near interleaved) and to the placement seed (cross-type adjacency 94-100% across placement seeds).
+
+**Table 4.** Learning quality (taught mass after the plastic phase), mean ± s.d. over ten seeds, N=900.
+
+| Placement | Taught mass | vs. segregated | vs. interleaved |
+|---|---|---|---|
+| Random | 2740 ± 23 | +299% | −6% |
+| Segregated (ours) | 686 ± 5 | — | −77% |
+| Interleaved (ours) | 2926 ± 26 | +326% | — |
+| SpiNeMap — population graph | 2604 ± 58 | +279% | −11% |
+| SpiNeMap — functional graph | 2678 ± 52 | +290% | −8% |
+
+The mechanism is that minimizing communication energy *compacts* each population rather than spreading correlated types apart; at this benchmark's core pitch — equal to the plasticity radius — that compaction leaves correlated neurons within reach, so associations still form. This sharpens the paper's central claim rather than weakening it: the penalty attaches to spatial segregation of functionally correlated neurons specifically, not to wire-length optimization in general. Our hand-rolled segregated baseline is therefore more pathological than a real mapping tool, a limitation we take up directly, with its scope and geometry-dependence, in Section 6.
+
 ---
 
 ## 5. Discussion
@@ -323,14 +355,24 @@ space, or just locality (4.3); does it depend on our specific
 learning rule (4.4); does it survive real data (4.5). The effect
 persists through all three, with the magnitude varying by test in
 ways we believe are individually explicable rather than arbitrary.
+Section 4.6 addresses a fourth objection of a different kind — not
+whether the effect is real but whether our segregated baseline
+represents a tool anyone deploys — by running SpiNeMap's actual
+algorithm through the same benchmark; we take up what it implies for
+the central claim in Section 6.
 
 **Practical implication for hardware mapping.** A mapping tool
 optimizing purely for communication energy, applied to hardware with
-active structural plasticity, may be actively harmful to the
-network's ability to learn — the two objectives are not merely
-independent but can trade off directly, with our synthetic and
-real-data results suggesting the learning cost can substantially
-exceed any energy benefit gained.
+active structural plasticity, can be harmful to the network's ability
+to learn — the two objectives are not merely independent but can trade
+off directly, with our synthetic and real-data results suggesting the
+learning cost can substantially exceed any energy benefit gained. The
+harm is not automatic, however: as Section 4.6 shows, a
+communication-minimizing tool that compacts rather than spreads
+correlated populations can avoid it entirely. The risk is specific to
+placements that separate correlated populations beyond the reach of
+local plasticity — a property a plasticity-aware mapper could check
+for and, in principle, optimize against.
 
 ---
 
@@ -341,46 +383,21 @@ respects in which this work's central claim should not yet be fully
 trusted, rather than defending it.*
 
 **Baseline fidelity.** Our "segregated" placement condition is our
-own implementation of a wire-length-minimizing heuristic, not the
-output of a published mapping tool. To close this gap we implemented
-the actual algorithm of SpiNeMap (Balaji et al., arXiv:1909.01843) —
-which has no public code release — from its published description:
-greedy Kernighan-Lin clustering (SpiNeCluster) followed by
-particle-swarm placement (SpiNePlacer), both written from scratch and
-verified before use (the partitioner reaches the theoretical minimum
-cut on the benchmark graph and matches networkx's bisection; the
-placer reduces wire energy to 0.42-0.46x of random assignment). We
-ran it through the same Placement-Learning Benchmark (Experiment 38,
-ten seeds). The result runs against the intuition that any
-wire-length-optimizing tool segregates: SpiNeMap does *not* reproduce
-our pathological baseline. It produces 2,604-2,678 units of learned
-structure (depending on the connectivity graph supplied) versus 686
-for our segregated condition and 2,926 for interleaved — that is,
-86-89% of the way from segregated to interleaved, and roughly four
-times the learned structure of our own segregated baseline. Our
-hand-rolled baseline is therefore *more* pathological than a real
-tool, and the 4x figure should be read as the penalty a naive
-type-segregation incurs, not the penalty a deployed mapper like
-SpiNeMap would produce.
-
-This sharpens rather than overturns the central claim. The penalty
-attaches to spatial *segregation of functionally correlated neurons*
-specifically, not to wire-length optimization in the abstract.
-SpiNeMap minimizes global communication by compacting each population;
-at our core pitch (equal to the plasticity radius) that compaction
-leaves correlated cross-type neurons within reach, so associations
-still form. A tool incurs the penalty only insofar as its output
-spreads correlated populations beyond the plasticity radius — which
-our block-segregated heuristic does and SpiNeMap, at this scale, does
-not. We tested both the pre-plasticity case (SpiNeMap given only the
-population structure realistically available before learning) and the
-associations-declared case (the target connectivity supplied up
-front); both land near interleaved, so the conclusion does not hinge
-on that modeling choice. The result is geometry-dependent, however: on
-a sparser fabric, or with inter-core distances large relative to the
-plasticity radius, even a communication-minimizing placer could
-separate populations enough to re-incur the penalty. Quantifying that
-crossover is future work.
+own wire-length-minimizing heuristic, not the output of a published
+mapping tool. Section 4.6 addresses this directly: we implemented
+SpiNeMap's actual algorithm and found it does *not* reproduce our
+pathological baseline — it lands near interleaved, roughly 4x above
+our segregated condition. Two consequences for how this paper's
+central number should be read. First, our hand-rolled 4x baseline is
+more pathological than a real tool; it should be read as the penalty a
+naive type-segregation incurs, not one a deployed mapper like SpiNeMap
+necessarily produces. Second, the effect is geometry-dependent:
+SpiNeMap avoids the penalty here because it compacts populations and
+our core pitch equals the plasticity radius, so correlated neurons
+stay within reach; on a sparser fabric, or with inter-core distances
+large relative to the plasticity radius, even a communication-
+minimizing placer could separate populations enough to re-incur it.
+Quantifying that crossover is future work.
 
 **Task and scale realism.** All synthetic results (Sections 4.1-4.4)
 use hand-designed stimulus patterns at N=900-5,000. Experiment 33's
