@@ -122,12 +122,33 @@ correct until checked.
   the collaboration is currently limited to an inference-only
   comparison he offered to run. Awaiting his results; no fixed
   timeline. A follow-up email was sent; no reply as of this handoff.
-- **Most recent completed result**: Exp 37b — the placement effect
-  confirmed on real SHD (Spiking Heidelberg Digits) speech data,
-  9.31x interleaved-vs-segregated, with adjacency-matched geometry and
-  a corrected decay rate. This closed the single biggest gap
-  identified in a self-directed skeptical review (the "is this only a
-  synthetic-pattern artifact" objection).
+- **Real-data result (Exp 37b -> 37c)**: the placement effect confirmed
+  on real SHD (Spiking Heidelberg Digits) speech data, closing the
+  "is this only a synthetic-pattern artifact" gap. NOTE the headline
+  number was corrected: Exp 37b's 9.31x (n=5, 4 samples/class) was a
+  small-sample draw that does NOT reproduce from committed code (a fresh
+  audit gives 7.22x). Exp 37c re-ran at n=12 with 20 distinct
+  samples/class and confirmed the effect is not a small-sample artifact:
+  7.25x [5.05x, 11.48x] at the validated life/decay regime, p < 1e-8.
+  The magnitude is regime-dependent (~3.6x-7.3x with training exposure),
+  not a single fixed number. Preprint, README, and the exp37b docstring
+  were all reconciled to this.
+- **Most recent completed result (Exp 38)**: closed the "invented
+  baseline" gap. SpiNeMap (Balaji et al., arXiv:1909.01843) has no
+  public code, so its published two-step algorithm was implemented from
+  scratch — SpiNeCluster (greedy Kernighan-Lin partitioning) +
+  SpiNePlacer (particle-swarm placement) — and run through the PLB.
+  Finding: SpiNeMap does NOT reproduce our pathological segregated
+  baseline. It lands 86-89% of the way toward interleaved (~4x more
+  learned structure than our segregated condition), because minimizing
+  communication energy COMPACTS populations rather than spreading
+  correlated types apart. This SHARPENED the paper's claim rather than
+  breaking it: the penalty attaches to segregation of correlated neurons
+  specifically, not to wire-length optimization in the abstract. The
+  "every mapping tool optimizes the wrong objective" rhetoric in the
+  abstract, README, and exp32b was softened to match. Caveat logged in
+  Section 6: the result is geometry-dependent (core pitch = plasticity
+  radius here); a sparser fabric could re-incur the penalty.
 - **Open, honestly-unresolved thread**: an "inverted-U" finding in
   Exp 35's timing-jitter sweep (moderate jitter beats both perfect
   synchrony and high jitter) survived three separate mechanism
