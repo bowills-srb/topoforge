@@ -15,8 +15,7 @@ continues to change after deployment — the same placement decision
 also determines *what the network can learn*, independent of its
 effect on energy. Across simulated substrates from N=900 to N=5,000,
 placing functionally distinct neuron populations in contiguous,
-wire-length-optimal blocks ("segregated" placement — the output every
-communication-aware mapping tool converges toward) produces a
+wire-length-optimal blocks ("segregated" placement) produces a
 3.8-4.0x learning penalty relative to placement that interleaves
 those populations, at negligible energy cost during frozen operation.
 We show this effect survives three independent stress tests: removal
@@ -29,7 +28,14 @@ spike-encoded human speech (Spiking Heidelberg Digits), where an
 adjacency-matched, twelve-seed comparison shows a segregated-placement
 learning penalty of roughly 3.6x-7.3x depending on training-exposure
 regime (7.25x, 95% CI [5.05x, 11.48x], at the validated regime;
-Welch p = 3.2×10⁻¹⁴). We report effect sizes, statistical tests,
+Welch p = 3.2×10⁻¹⁴). The penalty is a property of segregation
+specifically, not of wire-length optimization in general: a
+from-scratch reimplementation of a published mapping tool (SpiNeMap)
+compacts populations rather than segregating them and lands near
+interleaved placement, yielding roughly four times the learned
+structure of our segregated baseline — so a deployed mapper need not
+incur the penalty our hand-rolled baseline exhibits. We report effect
+sizes, statistical tests,
 and — in a dedicated Limitations section — the specific respects in
 which this evidence should and should not be trusted at its current
 stage.
@@ -160,8 +166,8 @@ at scale without ever materializing a dense N x N state matrix.
 ### 3.3 Placement strategies compared
 
 - **Segregated**: neurons of each functional type occupy a
-  contiguous region (the output a wire-length-minimizing heuristic
-  converges toward).
+  contiguous region (the output our wire-length-minimizing heuristic
+  converges toward; a real tool need not — see Section 6).
 - **Interleaved**: functional types are spatially mixed.
 - **Random**: type assignment is independent of position (a control).
 
