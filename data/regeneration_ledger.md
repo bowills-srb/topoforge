@@ -71,12 +71,21 @@ Status legend: `done` = regenerated and recorded; `running`; `pending`.
 
 | Figure | Before | After | Δ | Status |
 |---|---|---|---|---|
-| N=900 segregated | 731.8 ± 6.0 | | | running |
-| N=900 interleaved | 2952.9 ± 29.1 | | | running |
-| N=900 ratio | 4.04x | | | running |
-| N=900 t(18) | 236.7 | | | running |
-| N=900 p | 1.1e-19 | | | running |
-| N=900 Cohen's d | 105.9 | | | running |
+| N=900 segregated | 731.8 ± 6.0 | 703.3 ± 1.9 | −3.9% | done |
+| N=900 interleaved | 2952.9 ± 29.1 | 2950.1 ± 37.7 | −0.1% | done |
+| N=900 random | 2733.2 ± 25.9 | 2733.7 ± 23.3 | +0.0% | done |
+| N=900 ratio | 4.04x | 4.20x | +3.9% | done |
+| N=900 t / df | t(18) = 236.7 | Welch t(9.0) = 188.0 | see note | done |
+| N=900 p | 1.1e-19 | 1.5e-17 (Welch) | see note | done |
+| N=900 Cohen's d | 105.9 | 84.1 | −20.6% | done |
+
+Note on the test statistic. Section 3.4 states the method is Welch's t-test
+(unequal variances), but the reported `t(18)` is Student's pooled degrees of
+freedom — with these variances Welch gives df ≈ 9. The regenerated row reports
+Welch consistently with the stated method. For reference the pooled statistic on
+the new data is t(18) = 188.0, p = 4.2e-31. Cohen's d falls because the
+segregated s.d. tightened from 6.0 to 1.9, not because the effect shrank; the
+ratio grew.
 | N=5000 segregated | 4032.8 ± 26.8 | | | pending |
 | N=5000 interleaved | 15349.6 ± 216.7 | | | pending |
 | N=5000 ratio | 3.81x | | | pending |
@@ -94,9 +103,15 @@ Status legend: `done` = regenerated and recorded; `running`; `pending`.
 
 | Figure | Before | After | Δ | Status |
 |---|---|---|---|---|
-| segregated | 726 ± 9 | | | pending |
-| interleaved | 2037 ± 18 | | | pending |
-| ratio | 2.81x | | | pending |
+| segregated | 726 ± 9 | 701 ± 0 | −3.4% | done |
+| interleaved | 2037 ± 18 | 2045 ± 10 | +0.4% | done |
+| ratio | 2.81x | 2.92x | +3.9% | done |
+
+The segregated s.d. collapsing to 0 is a real consequence, not a defect: with
+zero cross-type reach nothing is learned, so taught mass is fixed by the seeded
+initial connectivity, and the previous ±9 was unstable tie-breaking being read
+as seed variance. The spatial PLB retains segregated variance because its
+candidate score carries a 1/(1+0.05d^2) term that breaks ties by distance.
 
 ### Section 4.4 — external ITDP rule (exp35b)
 
@@ -115,12 +130,44 @@ Status legend: `done` = regenerated and recorded; `running`; `pending`.
 | Welch p | 3.2e-14 | | | pending |
 | Wilcoxon p | 4.9e-4 | | | pending |
 | Cohen's d | 7.53 | | | pending |
-| 4-sample re-verification | 7.22x | | | pending |
+| 4-sample re-verification | 7.22x | **16.24x** | **+125%** | done |
+| 4-sample segregated | not published | 311.8 ± 148.7 | — | done |
+| 4-sample interleaved | not published | 5064.5 ± 240.0 | — | done |
+| 4-sample CI | not published | [11.70x, 26.26x] | — | done |
 | 2-epoch ratio | 3.62x | | | pending |
 | 2-epoch CI | [2.70x, 5.42x] | | | pending |
 | 2-epoch p | 1.3e-7 | | | pending |
 | 2-epoch d | 4.9 | | | pending |
 | segregated RSD | 60–70% | | | pending |
+
+### Attribution control for the Section 4.5 swing
+
+The 4-sample real-data ratio moved 7.22x -> 16.24x (+125%), far beyond every
+other change. Because that moves the headline in the *favourable* direction, it
+was verified rather than assumed: the same patched code was re-run with the sort
+forced back to the old unstable default.
+
+| Configuration | segregated | interleaved | ratio |
+|---|---|---|---|
+| patched code + unstable sort | 688.0 ± 130.3 | 4968.5 ± 263.4 | **7.22x** |
+| patched code + stable sort | 311.8 ± 148.7 | 5064.5 ± 240.0 | **16.24x** |
+
+The control reproduces the published 7.22x exactly, so the swing is attributable
+to tie-breaking alone and no defect was introduced by the patch. Interleaved
+differs 1.9% between sorts; segregated differs 55%.
+
+The consequence is larger than a changed number. Both values are legitimate
+outputs of identical physics, differing only in which tied-at-zero connections
+were replaced. `kind='stable'` makes that choice reproducible but not
+principled — it picks index order. The published ± seed variance never contained
+this uncertainty, so the precision of the real-data magnitude was overstated in a
+way that adding seeds could not have revealed.
+
+Recommended follow-up (NOT done here, outside this task's scope): break ties with
+a per-seed randomization rather than deterministically, so that reported seed
+variance absorbs tie uncertainty and the error bars mean what they appear to
+mean. That is a change to the experiment's statistical design, not a bug fix,
+and should be a deliberate decision.
 
 ### Section 4.6 — SpiNeMap (exp38)
 
@@ -160,10 +207,16 @@ Status legend: `done` = regenerated and recorded; `running`; `pending`.
 | count form pooled R2 | 0.266 | | | pending |
 | coverage pooled R2 / rho | 0.832 / 0.922 | | | pending |
 | incremental R2 (count / coverage) | +0.004 / +0.172 | | | pending |
-| Table 8 C1 / C2 / C3 | 2909±27 / 2739±63 / 2082±36 | | | pending |
-| C2-vs-C3 | 1.32x, p=3.6e-11, d=12.8 | | | pending |
-| C1-vs-C3 | 1.40x, p=1.5e-16 | | | pending |
-| C1-vs-C2 | 1.06x, p=5.0e-5, d=3.5 | | | pending |
+| Table 8 C1 / C2 / C3 | 2909±27 / 2739±63 / 2082±36 | 2925±35 / 2719±53 / 2096±44 | +0.6 / −0.7 / +0.7% | done |
+| C2-vs-C3 | 1.32x, p=3.6e-11, d=12.8 | 1.30x, p=7.3e-13, d=12.8 | −1.5% | done |
+| C1-vs-C3 | 1.40x, p=1.5e-16 | 1.40x, p=1.7e-15, d=20.7 | 0.0% | done |
+| C1-vs-C2 | 1.06x, p=5.0e-5, d=3.5 | 1.08x, p=8.4e-7, d=4.6 | +1.9% | done |
+
+All three registered verdicts are unchanged (count REFUTED, coverage confirmed
+in isolation, frac non-zero). Note the pattern this establishes: every condition
+here learns substantially (2000-2900) and every one is stable to within 1%. The
+large swings in this regeneration are confined to conditions that learn almost
+nothing, where the ratio's denominator is dominated by tie-breaking.
 | density control | 0.4%, p=0.72 | | | pending |
 | mediator metrics (count/frac/cover) | placement-only | unchanged | 0% | done |
 
