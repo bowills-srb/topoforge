@@ -203,6 +203,28 @@ correct until checked.
   coverage. Logged in Limitations as post-hoc metric selection; a
   confirmatory test needs a placement family built in advance to make
   count and coverage disagree (not yet run).
+- **Most recent completed result (Exp 43)**: confirmatory test of the
+  COVERAGE mediator, run because Exp 42b's coverage form was selected
+  post-hoc. Three placements built in advance so count, partner-share
+  (frac) and coverage predict DIFFERENT orderings, predictions and
+  decision rules registered in the docstring before running. Blobs of
+  constant density on a lattice spaced so every intra-blob pair is
+  inside the plasticity radius and every inter-blob pair outside it --
+  composition fixes reach by construction, verified with zero
+  inter-blob neighbours. Result: the COUNT account is REFUTED (C3 has
+  the highest mean count, 6.25, and the lowest learning, 2082, below
+  both others at p = 3.6e-11 and 1.5e-16). Coverage confirmed in
+  isolation (C2 vs C3, matched count and frac: 2739 -> 2082, 1.32x).
+  But frac is NOT inert (C1 vs C2, matched count and coverage: 2909 ->
+  2739, 1.06x, p = 5e-5), and a density control -- rescaling C2's blob
+  radii to match C1's nearest-neighbour spacing -- moved learning only
+  0.4% (p = 0.72), so that small frac effect is real rather than a
+  boundary-density artifact. Standing claim: the mediator is
+  fractional, not a pool size; primarily whether a correlated neuron
+  has ANY reachable partner, secondarily what share of its
+  neighbourhood they are. NOT calibrated -- the same relative coverage
+  drop costs 1.32x here and 3.27x in Exp 38's geometry, so it predicts
+  ordering, not magnitude. Logged as such in Limitations.
 - **Open, honestly-unresolved thread**: an "inverted-U" finding in
   Exp 35's timing-jitter sweep (moderate jitter beats both perfect
   synchrony and high jitter) survived three separate mechanism

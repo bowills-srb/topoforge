@@ -1,0 +1,68 @@
+==============================================================================
+EXP 43: confirmatory test of the coverage mediator
+3 conditions x 8 seeds. Predictions registered in the docstring.
+==============================================================================
+==============================================================================
+AUDIT -- the design is only a test if the geometry is what we claim
+==============================================================================
+
+[1] population: 900 neurons, exactly 180 of each of 5 types
+    spread15    N=900   per-type=[180, 180, 180, 180, 180]  OK
+    dilute30    N=900   per-type=[180, 180, 180, 180, 180]  OK
+    clumped30   N=900   per-type=[180, 180, 180, 180, 180]  OK
+
+[2] reach is structural: every intra-blob pair INSIDE the radius,
+    every inter-blob pair OUTSIDE it (so composition fixes reach)
+    spread15    max intra-blob dist 2.95 (< 5.0), inter-blob neighbours 0  OK
+    dilute30    max intra-blob dist 4.14 (< 5.0), inter-blob neighbours 0  OK
+    clumped30   max intra-blob dist 4.14 (< 5.0), inter-blob neighbours 0  OK
+
+[3] density matched across conditions (mean nearest-neighbour dist)
+    spread15    mean NN distance 0.382
+    dilute30    mean NN distance 0.356
+    clumped30   mean NN distance 0.356
+
+[4] the metrics separate as designed (measured, not assumed)
+    condition      count     frac    cover   intended
+    spread15        6.00    0.429    1.000   count 6.00, frac 0.429, cover 1.000
+    dilute30        6.00    0.207    1.000   count 6.00, frac 0.207, cover 1.000
+    clumped30       6.25    0.216    0.417   count 6.25, frac 0.216, cover 0.417
+
+[5] the contrasts the test depends on
+    [OK] C1 vs C2: frac differs >1.8x at equal count and cover
+    [OK] C2 vs C3: cover differs >2x at matched count and frac
+    [OK] C3 count is NOT lower than C1/C2 (adversarial to H_cover)
+
+VERDICT: PASS
+
+==============================================================================
+RUNNING
+==============================================================================
+  spread15    count=6.00 frac=0.429 cover=1.000  taught=2909 +/- 27  (29s)
+  dilute30    count=6.00 frac=0.207 cover=1.000  taught=2739 +/- 63  (57s)
+  clumped30   count=6.25 frac=0.216 cover=0.417  taught=2082 +/- 36  (59s)
+
+==============================================================================
+PAIRWISE CONTRASTS (Welch, 8 seeds)
+==============================================================================
+  spread15       2909  vs  dilute30       2739   ratio  1.06x   p=4.98e-05   d=3.5
+  dilute30       2739  vs  clumped30      2082   ratio  1.32x   p=3.64e-11   d=12.8
+  spread15       2909  vs  clumped30      2082   ratio  1.40x   p=1.53e-16   d=26.1
+
+==============================================================================
+VERDICT ON THE THREE ACCOUNTS
+==============================================================================
+  H_count (C3 >= C1 ~ C2)   : REFUTED -- C3 is below both, despite its higher count
+  H_frac  (C1 >> C2 ~ C3)   : SUPPORTED -- C1 exceeds C2 at matched count and coverage
+  H_cover (C1 ~ C2 >> C3)   : partially supported
+
+  Mixed: coverage beats count, but frac is not cleanly separated
+  from it. Report both as viable; do not claim coverage alone.
+
+  measured mediators vs learning:
+  condition      count     frac    cover     taught
+  spread15        6.00    0.429    1.000       2909
+  dilute30        6.00    0.207    1.000       2739
+  clumped30       6.25    0.216    0.417       2082
+
+total 145s

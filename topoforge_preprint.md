@@ -417,7 +417,19 @@ Three results, one of which contradicts a prediction we registered before runnin
 
 **Refining the mediator (exploratory).** Section 4.7 measured reach as a mean *count* of correlated partners within the radius, on a placement family where every reasonable form of that measure co-varies. This sweep breaks the tie, and the count form does not survive it: pooled across all four placement families and six pitches, count explains R² = 0.266 of the variance in learning. The failure is systematic, not noisy — population-graph SpiNeMap at ρ = 0.5 has a *higher* mean count than interleaved (36.8 vs 29.6) while learning half as much, because type-pure cores concentrate the reachable pool onto boundary neurons and leave core interiors with nothing in reach. Substituting *coverage* — the fraction of correlated neurons with at least one partner within the radius — raises this to R² = 0.832 (Spearman ρ = 0.922), and five pairs of conditions with matched count (6.3–8.1) but different coverage all separate as coverage predicts: coverage 1.00 gives ≈2980 taught, coverage 0.61 gives 904. Adding count back on top of coverage buys +0.004 R², while coverage adds +0.172 over count alone. Pool size is not irrelevant, but its effect is strongly saturating: within interleaved placement, where coverage is pinned at 1.000 at every pitch, a 9.9x reduction in mean count costs only 1.49x in learning, against roughly 4x for losing coverage altogether.
 
-We therefore restate the mechanism of Section 4.7 more precisely: placement acts on learning primarily through *whether* correlated neurons have any partner the local rule can reach, and only secondarily, with diminishing returns, through how many. We flag the epistemic status honestly — only the count form was pre-registered, in Exp 40; coverage was formulated after seeing the discrepancy above and is therefore exploratory model selection rather than a confirmatory test. A clean confirmatory test requires a placement family constructed so that count and coverage make opposing predictions, which we have not yet run.
+**Confirming it on a family built to discriminate.** Because coverage was formulated after seeing the data above, we ran a separate confirmatory test on three placements constructed in advance to make the rival accounts predict different orderings, with the predictions and decision rules registered before the run. All 900 neurons are placed in blobs of constant density on a lattice spaced so that every intra-blob pair lies inside the plasticity radius and every inter-blob pair outside it, so a blob's composition fixes its members' reach by construction rather than by measurement (verified: zero inter-blob neighbours, maximum intra-blob distance 2.95-4.14 against a radius of 5.0). C1 uses 60 blobs of 15; C2 uses 30 blobs of 30 with all five types mixed; C3 uses 30 blobs of 30 with the partner types concentrated into a few blobs and the remaining neurons parked in blobs whose types are not associated. C1→C2 changes partner share 2.1x at fixed count and coverage; C2→C3 changes coverage 2.4x at matched count and partner share. The design is adversarial to the coverage account: C3 has the *highest* mean count (6.25 against 6.00), so the count account predicts C3 wins outright rather than merely tying.
+
+**Table 8.** Confirmatory test. Mean ± s.d. over eight seeds, N=900. Metrics are measured on the built placements, not assumed.
+
+| Condition | count | frac | cover | Taught mass |
+|---|---|---|---|---|
+| C1 spread15 | 6.00 | 0.429 | 1.000 | 2909 ± 27 |
+| C2 dilute30 | 6.00 | 0.207 | 1.000 | 2739 ± 63 |
+| C3 clumped30 | 6.25 | 0.216 | 0.417 | 2082 ± 36 |
+
+The count account is refuted: C3 carries the largest reachable pool and learns the least, significantly below both other conditions (vs C2, 1.32x, Welch p = 3.6×10⁻¹¹, d = 12.8; vs C1, 1.40x, p = 1.5×10⁻¹⁶). The coverage effect is confirmed in isolation, since C2 and C3 are matched on both count and partner share and differ only in coverage. Partner share, however, is not inert: C1 exceeds C2 by 1.06x (p = 5.0×10⁻⁵, d = 3.5) at matched count and coverage. Smaller blobs have proportionally more boundary, making C1 about 7% sparser than C2 in nearest-neighbour spacing, so we controlled for that directly by rescaling C2's blob radii to match C1's spacing at fixed count, share and coverage: learning moved 0.4% (p = 0.72), against the 6.2% C1-vs-C2 gap. The partner-share effect is therefore real rather than a density artifact.
+
+We therefore restate the mechanism of Section 4.7 more precisely, and with one part of it now confirmed rather than merely fitted. The mean *size* of the reachable correlated pool is not the mediator — an account based on it is refuted by a placement built in advance to test it. What matters is fractional: primarily *whether* a correlated neuron has any partner the local rule can reach (a 2.4x coverage change moves learning 1.32x), and secondarily what share of its reachable neighbourhood those partners represent (a 2.1x change moves learning 1.06x). Neither quantity alone predicts magnitudes across all conditions — coverage falls 2.4x between C2 and C3 while learning falls only 1.32x, and the corresponding drop in Section 4.6 was far steeper — so we claim the ordering and the mechanism, not a calibrated functional form.
 
 ---
 
@@ -453,7 +465,9 @@ protects at every density tested, and — by holding learning exactly
 constant across a 4x change in wire distance at fixed reach — it rules
 out distance itself, as opposed to reach, as the operative variable.
 It also refines how reach should be measured: coverage of the
-correlated population, not the mean size of the reachable pool.
+correlated population, not the mean size of the reachable pool — a
+refinement then confirmed against its rivals on a placement family
+built in advance to discriminate them.
 
 **Practical implication for hardware mapping.** A mapping tool
 optimizing purely for communication energy, applied to hardware with
@@ -507,16 +521,22 @@ stating: these results rest on a single implementation, and one
 load-bearing component of it was wrong for a period without any
 result looking anomalous.
 
-**Post-hoc metric selection.** The coverage form of the reach
+**Mediator form and its limits.** The coverage form of the reach
 metric adopted in Section 4.8 was chosen after observing that the
 pre-registered mean-count form failed on the corrected Section 4.6
-result. It fits the pooled data well (R^2 = 0.832 across four
-placement families and six fabric densities, against 0.266 for the
-count form), and the direction is supported by five independent
-matched-count comparisons, but it has not been tested on a placement
-family constructed in advance to discriminate the two. Until it is,
-the coverage form should be read as the best current description of
-the mediator rather than as a confirmed one.
+result. It has since been tested confirmatorily, on three placements
+built in advance so the rival accounts predict different orderings,
+and it survived while the count account was refuted. Two residual
+limits remain. First, coverage is not the whole story: the share of a
+neuron's reachable neighbourhood that consists of partners has a
+real, independent, though much smaller effect (1.06x for a 2.1x
+change, density-controlled). Second, none of these forms is
+quantitatively calibrated — the same relative drop in coverage
+produces a 1.32x learning penalty in one setting and a 3.27x penalty
+in another, so the metric predicts direction and ordering reliably
+but not magnitude. A mapper could use it as a constraint; it should
+not yet be used as a predictor of how much learning a given placement
+will cost.
 
 **Task and scale realism.** All synthetic results (Sections 4.1-4.4)
 use hand-designed stimulus patterns at N=900-5,000. Experiment 33's
