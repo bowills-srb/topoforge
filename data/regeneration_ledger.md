@@ -97,7 +97,14 @@ ratio grew.
 
 | Figure | Before | After | Δ | Status |
 |---|---|---|---|---|
-| spatial-coherence ratio | 4.7x | | | pending |
+| spatial-coherence ratio | 4.7x | 4.43x (C_pairs 1731 vs 391) | −5.7% | done |
+
+Claim intact. Note for whoever reruns exp29: its printed verdict says "NO
+CONSENSUS EFFECT -- coherent and random produced similar structural change",
+which is assessing the edge-change metric (Δinternal −64 vs +4, Δtouching −222
+vs +52 -- which are plainly not similar), not the C_pairs ratio the preprint
+cites. The published figure is unaffected, but the script's self-assessment
+contradicts the use the paper makes of it.
 
 ### Section 4.3 — geometry removed (exp36)
 
@@ -117,28 +124,75 @@ candidate score carries a 1/(1+0.05d^2) term that breaks ties by distance.
 
 | Figure | Before | After | Δ | Status |
 |---|---|---|---|---|
-| fusion mass beyond radius | 0.00 ± 0.00 (5 seeds) | | | pending |
+| fusion mass beyond radius | 0.00 ± 0.00 (5 seeds) | 0.00 ± 0.00 (5 seeds) | **0%** | done |
+| near placement (context) | not published | 5436.98 ± 1522.42 | — | done |
+| no-timing control (context) | not published | 4039.42 ± 524.30 | — | done |
+| inverted-U jitter sweep | qualitative | 192.7 / 3473 / 5667 / 4747 / 4265 | shape intact | done |
+
+Exactly preserved, and necessarily so: if no cross-channel pair lies within the
+deposit radius there are no fusion events at all, hence no ties to break. The
+mechanism-level claim of 4.4 is the one result in the paper that the sort
+change *cannot* touch.
 
 ### Section 4.5 — real SHD speech (exp37c, exp39)
 
 | Figure | Before | After | Δ | Status |
 |---|---|---|---|---|
-| segregated bridge mass | 1161 ± 822 | | | pending |
-| interleaved bridge mass | 8423 ± 1089 | | | pending |
-| headline ratio | 7.25x | | | pending |
-| bootstrap 95% CI | [5.05x, 11.48x] | | | pending |
-| Welch p | 3.2e-14 | | | pending |
-| Wilcoxon p | 4.9e-4 | | | pending |
-| Cohen's d | 7.53 | | | pending |
+| segregated bridge mass | 1161 ± 822 | 1135.1 ± 372.8 | −2.2% (s.d. −55%) | done |
+| interleaved bridge mass | 8423 ± 1089 | 9329.0 ± 919.4 | +10.8% | done |
+| headline ratio | 7.25x | **8.22x** | +13.4% | done |
+| bootstrap 95% CI | [5.05x, 11.48x] | [7.03x, 10.05x] | narrower | done |
+| Welch p | 3.2e-14 | 3.53e-14 | ~0 | done |
+| Wilcoxon p | 4.9e-4 | 4.88e-4 | ~0 | done |
+| Cohen's d | 7.53 | 11.68 | +55% | done |
+
+**A CLAIM BREAKS HERE, not just a number.** Section 4.5 argues that sample
+diversity is not the driver of the effect, on the grounds that the 4-sample
+config (7.22x) and the 20-sample config (7.25x) were statistically
+indistinguishable. Regenerated, those are 16.24x [11.70, 26.26] and 8.22x
+[7.03, 10.05] — non-overlapping CIs. The claim as written is falsified by its
+own experiment.
+
+The defensible reading is NOT that sample diversity matters after all. It is
+that the 4-sample ratio does not reliably estimate anything: its denominator is
+311.8 of near-pure tie noise, so the original 7.22x/7.25x agreement was two
+unreliable quantities happening to coincide. Under any tie-break the 20-sample,
+12-seed configuration is the better-determined of the two. That paragraph needs
+rewriting, not renumbering.
 | 4-sample re-verification | 7.22x | **16.24x** | **+125%** | done |
 | 4-sample segregated | not published | 311.8 ± 148.7 | — | done |
 | 4-sample interleaved | not published | 5064.5 ± 240.0 | — | done |
 | 4-sample CI | not published | [11.70x, 26.26x] | — | done |
-| 2-epoch ratio | 3.62x | | | pending |
-| 2-epoch CI | [2.70x, 5.42x] | | | pending |
-| 2-epoch p | 1.3e-7 | | | pending |
-| 2-epoch d | 4.9 | | | pending |
-| segregated RSD | 60–70% | | | pending |
+| 2-epoch ratio | 3.62x | **5.09x** | +40.6% | done |
+| 2-epoch CI | [2.70x, 5.42x] | [3.93x, 7.27x] | — | done |
+| 2-epoch p | 1.3e-7 | 2.10e-14 (Welch) | — | done |
+| 2-epoch d | 4.9 | 7.37 | +50% | done |
+| 2-epoch segregated | not published | 1194.7 ± 719.7 | — | done |
+| 2-epoch interleaved | not published | 6084.2 ± 601.9 | — | done |
+| segregated RSD | 60–70% | 32.8% (matched) / 60.2% (2-epoch) | — | done |
+| stated real-data range | 3.6x–7.3x | **5.1x–8.2x** | — | done |
+| K=4 generalization (context) | not in preprint | 2.63x [2.43, 2.87] | — | done |
+
+**Section 4.5 needs the most rewriting of any section. Four statements fail:**
+
+1. *Sample diversity is not the driver* — rested on 7.22x vs 7.25x being
+   indistinguishable. Now 16.24x [11.70, 26.26] vs 8.22x [7.03, 10.05],
+   non-overlapping.
+2. *Both endpoints comfortably bracket the 3.8–4.0x synthetic result* — the
+   regenerated real-data range is 5.09x–8.22x and the regenerated synthetic
+   value is 4.20x, so the real range now lies entirely ABOVE the synthetic one
+   rather than bracketing it.
+3. *Two of twelve seeds produced bridge mass of essentially zero* — the
+   regenerated 2-epoch per-seed minimum is 274.1; no seed is near zero.
+   Per-seed: 402.3, 1094.0, 1222.6, 622.1, 608.8, 2233.4, 274.1, 1447.4,
+   1181.1, 1718.9, 908.2, 2623.3.
+4. *Relative standard deviation 60–70% regardless of seed count* — true for the
+   2-epoch regime (60.2%) but not the matched regime (32.8%).
+
+What survives: segregation harms real-data learning, substantially and with
+overwhelming significance, in every regime (5.09x–8.22x, all p < 1e-13), and
+segregated remains far more variable than interleaved (60.2%/32.8% vs 9.9%).
+The reliability claim holds in direction; its specific numbers do not.
 
 ### Attribution control for the Section 4.5 swing
 
@@ -173,16 +227,25 @@ and should be a deliberate decision.
 
 | Figure | Before | After | Δ | Status |
 |---|---|---|---|---|
-| Table 3 adjacency, SpiNeMap-pop | 71.1% / 66.7% | | | running |
-| Table 4 segregated | 731.8 ± 6.0 | | | running |
-| Table 4 SpiNeMap-population | 903.8 ± 61.2 | | | running |
-| Table 4 random | 2733.2 ± 25.9 | | | running |
-| Table 4 interleaved | 2952.9 ± 29.1 | | | running |
-| Table 4 SpiNeMap-functional | 2980.6 ± 16.6 | | | running |
-| pop-vs-interleaved ratio | 3.27x | | | running |
-| pop-vs-interleaved p, d | 9.9e-20, 42.8 | | | running |
-| pop-vs-segregated | 1.24x | | | running |
-| positions on axis | 7.7% / 90.1% / 100% / 101.2% | | | running |
+| Table 3 adjacency, SpiNeMap-pop | 71.1% / 66.7% | 71.1% / 66.7% | 0% (placement-only) | done |
+| Table 4 segregated | 731.8 ± 6.0 | 703.3 ± 1.9 | −3.9% | done |
+| Table 4 SpiNeMap-population | 903.8 ± 61.2 | 876.3 ± 49.8 | −3.0% | done |
+| Table 4 random | 2733.2 ± 25.9 | 2733.7 ± 23.3 | +0.0% | done |
+| Table 4 interleaved | 2952.9 ± 29.1 | 2950.1 ± 37.7 | −0.1% | done |
+| Table 4 SpiNeMap-functional | 2980.6 ± 16.6 | 2946.5 ± 26.1 | −1.1% | done |
+| pop-vs-interleaved ratio | 3.27x | 3.37x | +3.1% | done |
+| pop-vs-interleaved p, d | 9.9e-20, 42.8 | 4.6e-25, 46.9 | — | done |
+| pop-vs-segregated | 1.24x | 1.25x | +0.8% | done |
+| positions on axis | 7.7% / 90.1% / 100% / 101.2% | 7.7% / 90.4% / 100% / 99.8% | ~0% | done |
+
+The functional-graph row improves the paper's wording. It was 101.2% with a
+nominally significant p = 0.02 that had to be explained away as a low-noise
+artifact; it is now 99.8% with p = 0.807 — genuinely indistinguishable from
+interleaved, and the hedge can be deleted. But this weakens Section 4.9's
+Pareto claim: at 0.999x interleaved learning, SpiNeMap-functional no longer
+strictly DOMINATES interleaved (which required learning >= 1.0x). The claim
+becomes lower energy at statistically equal learning. Confirmed against the
+4.9 re-run before rewriting.
 
 ### Section 4.7 — dose-response and dissociation (exp40, exp41)
 
@@ -224,10 +287,23 @@ nothing, where the ratio's denominator is dominated by tie-breaking.
 
 | Figure | Before | After | Δ | Status |
 |---|---|---|---|---|
-| Table 9, 5 conditions x 4 columns | see preprint | | | pending |
-| frozen energy (bit-identical) | 5.01906e6 | | | pending |
-| interleaved/segregated energy | 1.0143x, p=3.6e-5 | | | pending |
-| learning gain | 4.27x | | | pending |
-| energy per unit taught | 3680 vs 874 | | | pending |
-| Pareto ratios vs interleaved | 0.972x / 1.006x | | | pending |
-| Pareto ratios vs segregated | 0.986x / 4.296x | | | pending |
+| Table 9 segregated | 2.529e6 / 687 | 2.525e6 / 704 | −0.2% / +2.5% | done |
+| Table 9 SpiNeMap-population | 2.530e6 / 861 | 2.497e6 / 875 | −1.3% / +1.6% | done |
+| Table 9 random | 2.564e6 / 2741 | 2.556e6 / 2730 | −0.3% / −0.4% | done |
+| Table 9 interleaved | 2.565e6 / 2935 | 2.566e6 / 2959 | +0.0% / +0.8% | done |
+| Table 9 SpiNeMap-functional | 2.493e6 / 2952 | 2.501e6 / 2951 | +0.3% / −0.0% | done |
+| frozen energy (bit-identical) | 5.01906e6 | 5.01906e6 | 0% (structural) | done |
+| interleaved/segregated energy | 1.0143x, p=3.6e-5 | 1.0162x, p=1.9e-9 | +0.2pp | done |
+| energy per unit taught | 3680 vs 874 | 3589 vs 867 | −2.5% / −0.8% | done |
+| Pareto vs interleaved | 0.972x / 1.006x = **dominates** | 0.975x / **0.997x** = **trades off** | claim breaks | done |
+| Pareto vs segregated | 0.986x / 4.296x = dominates | 0.990x / 4.195x = dominates | holds | done |
+| Pareto vs SpiNeMap-pop | 0.985x / 3.430x = dominates | **1.001x** / 3.373x = **trades off** | claim breaks | done |
+
+**A SECOND CLAIM BREAKS.** Section 4.9 states the association-aware mapper "is
+Pareto-dominant over every other condition tested" and "there is no axis on
+which it is worse". That is now false: it dominates only the segregated
+baseline. Against interleaved it buys 2.5% lower energy for a 0.3% learning
+deficit; against population-graph SpiNeMap it is 0.1% HIGHER energy, because
+that condition's energy fell 2.530e6 -> 2.497e6 and overtook it. The practical
+recommendation survives in weaker form (~3.4x the learning of the map-time
+graph at essentially equal energy) but the dominance sentence must go.
