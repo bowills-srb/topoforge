@@ -51,7 +51,7 @@ Your placement CSV needs columns: `neuron_id, x, y, cluster_identity`. See `src/
 
 ## The three findings, in one paragraph each
 
-**Placement.** Segregating neurons by function (the intuitive, wire-length-optimal choice) puts correlated partners beyond the reach of local plasticity rules - some associations become structurally impossible to learn. Interleaving avoids this at negligible energy cost. Confirmed on synthetic patterns (`exp32b_benchmark.py`) and on real speech data (`exp37c_real_data_scaled.py`).
+**Placement.** Segregating neurons by function (the intuitive, wire-length-optimal choice) puts correlated partners beyond the reach of local plasticity rules - some associations become structurally impossible to learn. Interleaving avoids this at *identical* inference energy (bit-identical, since the conditions differ only in which type sits where) and a 1.4% post-plasticity energy premium, against 4.3x more learned structure (`exp44_energy_frontier.py`). Better still, a communication-minimizing mapper that is simply told which populations must associate is Pareto-dominant over interleaving itself - lower energy, equal learning, and immune to fabric sparsity. Confirmed on synthetic patterns (`exp32b_benchmark.py`) and on real speech data (`exp37c_real_data_scaled.py`).
 
 **Persistence.** Three independent parameter sweeps (value-decay rate, correlation weight, edge turnover rate - `exp26` through `exp28`) show that none of them control how durably a network retains learned structure after its environment changes. Persistence is earned by the value hierarchy and defended by structural inertia - not tunable by any single constant.
 
