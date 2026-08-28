@@ -273,7 +273,19 @@ correct until checked.
   exact to 1.67e-15 against a dense reference under the deployed call
   pattern. New gate `src/audit_deployed.py` passes under both numpy
   1.26.4 and 2.5.1 in ~60s. CLAUDE.md corrected where it asserted
-  things now known false.
+  things now known false. Second half of the sweep found the
+  EXPERIMENT-level audits to be in good shape, in contrast to the
+  older src/ infrastructure: exp39's `--verify-equiv` is the model
+  (feeds the original's placements to both implementations and
+  requires bit-for-bit physics equality), and exp37c/40/41/42/43 each
+  re-audit their own deployed configuration. Also verified clean:
+  `shd_loader` checks downloads against official MD5 checksums (note
+  it degrades to a warning if the checksum fetch fails), and
+  `topoforge_run.py`'s independent re-implementation of the three
+  placement strategies is BIT-IDENTICAL to the benchmark's -- benign
+  today, but nothing enforced it, so the gate now pins it. A CLI that
+  silently drifted from the benchmarked geometry would recommend a
+  placement the paper never validated.
 - **Open, honestly-unresolved thread**: an "inverted-U" finding in
   Exp 35's timing-jitter sweep (moderate jitter beats both perfect
   synchrony and high jitter) survived three separate mechanism

@@ -245,6 +245,21 @@ def check_placements():
     check("SpiNeMap-pop reach collapses at rho=1.5", plb_reach(c, ci) < 0.02,
           "{:.3f}".format(plb_reach(c, ci)))
 
+    # the CLI re-implements the three placement strategies independently of the
+    # benchmark. They are bit-identical today and nothing enforces that, so a
+    # drift would let topoforge_run.py recommend a geometry the paper never
+    # validated. Pin it.
+    import topoforge_run as T
+    from exp32b_benchmark import CORES_X, CORES_Y, NEURONS_PER_CORE, NC
+    cp = T.make_core_grid(CORES_X, CORES_Y, 5.0)
+    for cli_name, bench_name in (("segregated", "vlsi"),
+                                 ("interleaved", "topoforge"),
+                                 ("random", "random")):
+        c1, i1 = T.place_neurons(cp, NEURONS_PER_CORE, NC, cli_name)
+        c2, i2 = make_placement(bench_name)
+        check("CLI {:<12} == benchmarked {}".format(cli_name, bench_name),
+              np.array_equal(c1, c2) and np.array_equal(i1, i2))
+
     # the Exp 43 design: composition must fix the mediators exactly
     for name, want in (("spread15", (6.00, 0.429, 1.000)),
                        ("dilute30", (6.00, 0.207, 1.000)),
