@@ -366,7 +366,20 @@ Two predictions were registered before running. First, a **dose-response**: tota
 | 2 | 1.00 | 37.3 | 1.00 |
 | 4 | 1.00 | 38.7 | 1.00 |
 
-We read this as evidence that placement affects learning through a single mediating quantity — the fraction of correlated pairs the local plasticity rule can physically reach — rather than through anything specific to a given geometry, task, or class count. On one curve it accounts for why removing geometry still leaves an effect (Section 4.3), why a communication-minimizing mapper that compacts populations lands near interleaved (Section 4.6), and why the penalty's magnitude shifts with regime (Section 4.5): each changes reach. Two honest limits: the reach range probed here is modest (roughly 24–39 neighbors), and reach is *measured*, not manipulated while holding all other geometric properties fixed — so this is strong correlational support for the mechanism, not a controlled proof. A placement that dissociates reach from other geometric properties would test it further.
+We read this as evidence that placement affects learning through a single mediating quantity — the fraction of correlated pairs the local plasticity rule can physically reach — rather than through anything specific to a given geometry, task, or class count. On one curve it accounts for why removing geometry still leaves an effect (Section 4.3), why a communication-minimizing mapper that compacts populations lands near interleaved (Section 4.6), and why the penalty's magnitude shifts with regime (Section 4.5): each changes reach. One honest limit remains at this point: in the sweep, reach is *measured*, not manipulated while holding all other geometric properties fixed, so the evidence so far is correlational. We resolve that next with a controlled dissociation.
+
+To turn the mediation from correlational to causal, we manipulated reach and the most obvious confound — whether output classes are spatially clustered or mixed — as two independent factors. Reach was set by rigidly translating the output population a distance from the input population, which changes input–output distances while preserving input–input and output–output structure exactly. Class arrangement was set by assigning class labels to a *fixed* set of output positions either in contiguous spatial blocks or shuffled: a pure relabeling that leaves the geometry, and therefore reach, byte-identical between the two (confirmed to machine precision at every separation). Across eight seeds and four separations (mean reach 71 → 57 → 23 → 2.6 input neighbours per output neuron), learning tracked reach monotonically and steeply — a 77-fold change from highest to lowest reach, Spearman ρ = 1.00 at fixed arrangement, pooled R² = 0.98 — while class arrangement had no significant effect at any matched reach (paired *p* = 0.09–0.28; Table 6). Reach is therefore not merely correlated with learning but the variable placement acts *through*; the spatial clustering of classes that nominally distinguishes "segregated" from "interleaved" is, on its own and with reach held fixed, inert.
+
+**Table 6.** Controlled dissociation. At each separation, class arrangement (clustered vs mixed) is a pure relabeling of identical output positions, so reach is byte-identical across the two columns; only the input–output separation changes reach. Total bridge mass, mean ± s.d. over eight seeds.
+
+| separation | mean reach | clustered | mixed | arrangement *p* (paired) |
+|---|---|---|---|---|
+| 0 | 71.0 | 5663 ± 1701 | 6346 ± 2591 | 0.11 |
+| 5 | 57.0 | 4754 ± 804 | 4993 ± 561 | 0.09 |
+| 10 | 22.5 | 1180 ± 914 | 819 ± 324 | 0.27 |
+| 15 | 2.6 | 73 ± 59 | 83 ± 66 | 0.28 |
+
+The arrangement comparisons are non-significant throughout, though a weak, non-significant trend favouring mixed at high reach (*p* ≈ 0.09–0.11) means we claim only that any arrangement effect is small relative to the 77-fold reach effect, not that it is exactly zero.
 
 ---
 
@@ -387,9 +400,12 @@ the central claim in Section 6. Section 4.7 then moves from *whether*
 to *how*: interpolating continuously between the conditions shows the
 effect is a monotonic dose-response mediated by a single placement-only
 quantity — the reachable correlated fraction — onto which the K=2 and
-K=4 sweeps collapse. This reframes the whole result mechanistically:
-placement matters exactly insofar as it sets how much of the correlated
-structure the local plasticity rule can physically reach.
+K=4 sweeps collapse, and a controlled dissociation (varying reach while
+holding class arrangement fixed by pure relabeling) confirms reach is
+*causal* rather than merely correlated. This reframes the whole result
+mechanistically: placement matters exactly insofar as it sets how much
+of the correlated structure the local plasticity rule can physically
+reach.
 
 **Practical implication for hardware mapping.** A mapping tool
 optimizing purely for communication energy, applied to hardware with
