@@ -286,6 +286,30 @@ correct until checked.
   today, but nothing enforced it, so the gate now pins it. A CLI that
   silently drifted from the benchmarked geometry would recommend a
   placement the paper never validated.
+- **Most recent completed result (Exp 44)**: the energy-learnability
+  frontier -- the first measurement in this project of the objective a
+  mapper actually optimizes (summed squared wire length over REALIZED
+  connections, post-plasticity) against what each placement learned.
+  Three results. (1) Inference energy is not "negligibly different"
+  between segregated and interleaved as Section 4.1 said, it is
+  BIT-IDENTICAL (5.01906e6, all 8 seeds) -- they share coordinates and
+  seeded connectivity and differ only in which type label sits where,
+  so the zero-inference-cost claim can drop its hedge. (2) A registered
+  prediction FAILED: interleaving does cost post-plasticity energy,
+  1.0143x vs segregated, p = 3.6e-5. Real and unambiguous -- and 1.4%,
+  against 4.27x more learned structure. Reported as a falsification,
+  with the magnitude stated so nobody reads "significant" as "large".
+  Per unit taught, segregated costs 3680 vs interleaved's 874. (3)
+  SpiNeMap on the functional graph is PARETO-DOMINANT over everything
+  tested: 0.972x energy at 1.006x learning vs interleaved, 0.986x
+  energy at 4.30x learning vs segregated. With Exp 42's finding that it
+  is also the only condition immune to fabric sparsity, the practical
+  recommendation is now "give the mapper the association structure",
+  not "interleave". Also noted: plasticity HALVES wire energy in every
+  condition (5.0e6 -> 2.5e6), because the rewire rule's distance
+  discount makes it pursue a communication objective on its own.
+  Preprint gains Section 4.9; abstract and Discussion updated. Run
+  under numpy 1.26.4 (venv).
 - **Open, honestly-unresolved thread**: an "inverted-U" finding in
   Exp 35's timing-jitter sweep (moderate jitter beats both perfect
   synchrony and high jitter) survived three separate mechanism

@@ -1,0 +1,78 @@
+==============================================================================
+EXP 44: the energy-learnability frontier
+5 conditions x 8 seeds
+==============================================================================
+==============================================================================
+AUDIT -- what is comparable to what, before any number is trusted
+==============================================================================
+
+[1] P1: segregated / interleaved / random occupy IDENTICAL positions
+    (they differ only in which type label sits where), so any energy
+    difference between them can only come from learned connections.
+    topoforge  coords identical to vlsi: True
+    random     coords identical to vlsi: True
+
+[2] SpiNeMap conditions DO differ geometrically -- reported separately
+    spinemap-population  coords identical to vlsi: False  (expected False)
+    spinemap-functional  coords identical to vlsi: False  (expected False)
+
+[3] pre-learning structure of each condition
+    condition                 reach   mean type/core
+    vlsi                       0.00             1.00
+    spinemap-population        6.34             1.00
+    random                     7.76             4.82
+    topoforge                  7.80             5.00
+    spinemap-functional       15.13             1.80
+
+VERDICT: PASS
+
+==============================================================================
+RUNNING
+==============================================================================
+  vlsi                   frozen E=  5.02e+06  plastic E=  2.53e+06  taught=   687  (87s)
+  spinemap-population    frozen E=  4.98e+06  plastic E=  2.53e+06  taught=   861  (98s)
+  random                 frozen E=  5.02e+06  plastic E=  2.56e+06  taught=  2741  (89s)
+  topoforge              frozen E=  5.02e+06  plastic E=  2.56e+06  taught=  2935  (87s)
+  spinemap-functional    frozen E=  4.99e+06  plastic E=  2.49e+06  taught=  2952  (113s)
+
+==============================================================================
+THE FRONTIER -- communication energy vs what was learned
+==============================================================================
+  condition                  frozen E    plastic E     taught E per taught
+  vlsi                      5.019e+06    2.529e+06        687         3680
+  spinemap-population       4.983e+06     2.53e+06        861         2940
+  random                    5.019e+06    2.564e+06       2741        935.6
+  topoforge                 5.019e+06    2.565e+06       2935        873.8
+  spinemap-functional       4.989e+06    2.493e+06       2952        844.3
+
+==============================================================================
+P1 -- is inference (frozen) energy really equal?
+==============================================================================
+  segregated 5.01906e+06 vs interleaved 5.01906e+06
+  bit-identical across all seeds: True
+  -> the 'zero inference-energy cost' claim is EXACT, not approximate
+
+==============================================================================
+P2 -- after plasticity, does the learning-preserving placement
+      cost more communication energy?
+==============================================================================
+  segregated  2.52875e+06 +/- 1.2e+04
+  interleaved 2.56483e+06 +/- 1.23e+04
+  interleaved / segregated = 1.0143x   Welch p = 3.61e-05
+  -> P2 FALSIFIED: interleaving does cost energy. The Discussion's
+     tradeoff sentence stands and the recommendation has a price.
+
+==============================================================================
+P3 -- does the association-aware mapper dominate?
+==============================================================================
+  vs topoforge              energy 0.972x, learning 1.006x  -> DOMINATES
+  vs vlsi                   energy 0.986x, learning 4.296x  -> DOMINATES
+  vs spinemap-population    energy 0.985x, learning 3.430x  -> DOMINATES
+
+==============================================================================
+Read the frontier column, not any single number: if the best-learning
+placements are also at or below the others on energy, then a
+plasticity-aware mapper is not asking anyone to pay for learnability.
+==============================================================================
+
+total 483s

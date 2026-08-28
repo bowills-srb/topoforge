@@ -17,7 +17,9 @@ effect on energy. Across simulated substrates from N=900 to N=5,000,
 placing functionally distinct neuron populations in contiguous,
 wire-length-optimal blocks ("segregated" placement) produces a
 3.8-4.0x learning penalty relative to placement that interleaves
-those populations, at negligible energy cost during frozen operation.
+those populations, at *identical* energy cost during frozen operation
+(bit-identical, since the conditions differ only in which type sits at
+which position) and a 1.4% post-plasticity energy premium.
 We show this effect survives three independent stress tests: removal
 of physical geometry entirely (the effect persists at 2.81x under
 pure graph-locality constraints, indicating the mechanism is local-
@@ -452,6 +454,32 @@ The count account is refuted: C3 carries the largest reachable pool and learns t
 
 We therefore restate the mechanism of Section 4.7 more precisely, and with one part of it now confirmed rather than merely fitted. The mean *size* of the reachable correlated pool is not the mediator — an account based on it is refuted by a placement built in advance to test it. What matters is fractional: primarily *whether* a correlated neuron has any partner the local rule can reach (a 2.4x coverage change moves learning 1.32x), and secondarily what share of its reachable neighbourhood those partners represent (a 2.1x change moves learning 1.06x). Neither quantity alone predicts magnitudes across all conditions — coverage falls 2.4x between C2 and C3 while learning falls only 1.32x, and the corresponding drop in Section 4.6 was far steeper — so we claim the ordering and the mechanism, not a calibrated functional form.
 
+### 4.9 The energy-learnability frontier
+
+Everything above concerns what a placement can learn. The objective a mapping tool actually optimizes is communication cost, and this paper has so far reported that side of the ledger only in passing. This section measures both together: for each placement, the summed squared wire length of the network's *realized* connections — after structural plasticity has rewired them — against what that placement learned. Eight seeds, N=900.
+
+One structural fact makes the central comparison exact rather than statistical. In this benchmark the segregated, interleaved and random conditions place neurons at *identical coordinates* and differ only in which type label sits at each position, and the initial connectivity is seeded identically. Any energy difference between them is therefore attributable entirely to the connections plasticity built, with no geometric confound whatsoever. The two SpiNeMap conditions do differ geometrically, since clustering assigns different neurons to different cores, and are reported alongside rather than as part of that exact comparison.
+
+**Table 9.** Communication energy (summed squared wire length over realized connections) and learning, mean over eight seeds. "Frozen" is before plasticity, "plastic" after. Sorted by learning.
+
+| Placement | frozen E | plastic E | taught | E per unit taught |
+|---|---|---|---|---|
+| Segregated (ours) | 5.019×10⁶ | 2.529×10⁶ | 687 | 3680 |
+| SpiNeMap — population graph | 4.983×10⁶ | 2.530×10⁶ | 861 | 2940 |
+| Random | 5.019×10⁶ | 2.564×10⁶ | 2741 | 936 |
+| Interleaved (ours) | 5.019×10⁶ | 2.565×10⁶ | 2935 | 874 |
+| SpiNeMap — functional graph | 4.989×10⁶ | 2.493×10⁶ | 2952 | 844 |
+
+**Inference energy is not approximately equal; it is identical.** Section 4.1 reported that frozen-phase energy "differs negligibly" between placements. It differs not at all: across all eight seeds the segregated and interleaved conditions record bit-identical frozen energy (5.01906×10⁶), which follows from their sharing coordinates and initial connectivity exactly. The claim that the learning penalty is incurred at zero inference-energy cost can be stated without hedging.
+
+**Choosing learnability does cost communication energy, and the cost is 1.4%.** We predicted before running that interleaving would carry no post-plasticity energy penalty. That prediction is falsified: interleaved placement ends with 1.0143× the wire energy of segregated (2.5648×10⁶ vs 2.5288×10⁶, Welch *p* = 3.6×10⁻⁵). The effect is real and statistically unambiguous. It is also, in magnitude, 1.4% — bought with 4.27× the learned structure. We report the falsification rather than the framing that would have been convenient, but we do not think a 1.4% energy premium for a 4.3-fold learning gain should be described as a tradeoff in any practical sense. Per unit of learned structure the ordering inverts sharply: segregated placement costs 3680 energy units per unit taught against interleaved's 874, a factor of 4.2.
+
+**Plasticity reduces communication energy.** In every condition, post-plasticity energy is roughly half the frozen value (≈2.5×10⁶ against ≈5.0×10⁶). This is a consequence of the rewiring rule's distance discount: connections are replaced preferentially with nearby partners, so a network that rewires ends up cheaper to communicate across than the random initial connectivity it started from, regardless of placement. Structural plasticity is not merely compatible with a communication-energy objective here; left to run, it pursues one.
+
+**The association-aware mapper dominates outright.** SpiNeMap given the functional graph is Pareto-dominant over every other condition tested — against interleaved, 0.972× the energy at 1.006× the learning; against our segregated baseline, 0.986× the energy at 4.30× the learning; against its own population-graph counterpart, 0.985× the energy at 3.43× the learning. There is no axis on which it is worse. Combined with Section 4.8's finding that it is also the only condition immune to fabric sparsity, this is the paper's clearest practical statement: a communication-minimizing mapper that is told which populations must associate gives up nothing at all — not energy, not learnability, not robustness to floorplan — relative to any other placement we tested, including our own recommended one.
+
+(These figures were produced under NumPy 1.26.4; see Section 3.4. All comparisons in this section are within that single environment, and the exact-equality result for frozen energy is structural rather than numerical.)
+
 ---
 
 ## 5. Discussion
@@ -488,14 +516,25 @@ out distance itself, as opposed to reach, as the operative variable.
 It also refines how reach should be measured: coverage of the
 correlated population, not the mean size of the reachable pool — a
 refinement then confirmed against its rivals on a placement family
-built in advance to discriminate them.
+built in advance to discriminate them. Section 4.9 closes the loop by
+measuring the objective a mapper actually optimizes, and finds the
+association-aware placement Pareto-dominant: lower communication
+energy *and* higher learning than every alternative tested, including
+our own recommended interleaving.
 
 **Practical implication for hardware mapping.** A mapping tool
 optimizing purely for communication energy, applied to hardware with
 active structural plasticity, can be harmful to the network's ability
-to learn — the two objectives are not merely independent but can trade
-off directly, with our synthetic and real-data results suggesting the
-learning cost can substantially exceed any energy benefit gained. This
+to learn. Section 4.9 measures both sides of that ledger rather than
+asserting them. The asymmetry is stark: segregated placement buys
+*exactly* zero inference-energy advantage (frozen energy is
+bit-identical, not merely similar) and 1.4% lower post-plasticity
+energy, in exchange for 4.3x less learned structure. Choosing
+learnability is therefore not free — the 1.4% is real and
+statistically unambiguous, and we had predicted it would be zero —
+but the exchange rate is such that describing these as competing
+objectives overstates the conflict by more than two orders of
+magnitude. This
 is not a hypothetical failure mode of a baseline we invented: Section
 4.6 shows a published tool incurring it on the graph it actually has
 at map time. What determines the outcome is the information the
