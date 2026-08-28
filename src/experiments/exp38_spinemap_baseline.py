@@ -99,66 +99,85 @@ def inter_cluster_cut(W, part):
 # ============================================================
 # SpiNeCluster: greedy Kernighan-Lin k-way partitioning
 # ============================================================
-def kernighan_lin_kway(W, cluster_size, n_clusters, seed=0, max_passes=12):
+def kernighan_lin_kway(W, cluster_size, n_clusters, seed=0, max_passes=200,
+                       permute=True):
     """Partition N nodes into n_clusters balanced clusters of cluster_size,
-    minimizing inter-cluster edge weight. Greedy KL: each pass computes
-    every node's affinity to every cluster, then performs balance-preserving
-    swaps (node a in cluster X <-> node b in cluster Y) whenever the combined
-    gain is positive, KL-style with locking. Repeats until no pass improves.
+    minimizing inter-cluster edge weight, by balance-preserving KL swaps.
+
+    Each pass: recompute the affinity matrix A[n,c] (weight from node n into
+    cluster c), then visit every unordered cluster pair (a,b) in random order
+    and perform the single best positive-gain swap between their members,
+    with node locking so a node moves at most once per pass. Repeat until a
+    pass makes no swap. The exact gain of swapping na in a with nb in b is
+
+        dInternal = (A[na,b] - A[na,a]) + (A[nb,a] - A[nb,b]) - 2*W[na,nb]
+
+    (the last term corrects for the na-nb edge, which is counted in both
+    node-level gains). Cut = total_weight - internal, so a positive dInternal
+    is a cut reduction.
+
+    HISTORY -- the original implementation of this function scored each node's
+    single best destination cluster, bucketed the movers by (from, to), and
+    paired them off in gain order. That heuristic STALLED on this graph, which
+    is massively tie-degenerate (every same-type node has an identical row):
+    on type-SORTED input -- exactly what make_placement_spinemap feeds it -- it
+    finished 6.4% above the optimal cut, at essentially the random-partition
+    cut (KL/random = 0.9965, mean cluster type-purity 0.38), i.e. it was not
+    partitioning at all. It happened to reach the optimum on type-SHUFFLED
+    input, which is what --sanity-cluster checked, so the failure went unseen.
+    See PROJECT_HISTORY, "SpiNeCluster node-order stall". Two changes fix it:
+    an exhaustive best-swap search within each cluster pair (rather than
+    pairing top-gain movers, which the -2*W[na,nb] correction makes unsound),
+    and an internal random node relabeling so the caller's node order cannot
+    determine the result. Both --sanity-cluster and --audit-cluster now test
+    the sorted input directly.
     """
-    from collections import defaultdict
     N_ = W.shape[0]
     assert cluster_size * n_clusters == N_, "clusters must tile N exactly"
     rng = np.random.default_rng(seed)
+    if permute:
+        perm = rng.permutation(N_)
+        W = W[np.ix_(perm, perm)]
     part = np.repeat(np.arange(n_clusters), cluster_size).astype(int)
     rng.shuffle(part)
 
     idx = np.arange(N_)
+    members = [np.where(part == c)[0] for c in range(n_clusters)]
+    pairs = [(a, b) for a in range(n_clusters) for b in range(a + 1, n_clusters)]
+
     for _pass in range(max_passes):
         oh = np.zeros((N_, n_clusters))
         oh[idx, part] = 1.0
-        A = W @ oh                      # A[n,c] = weight from n into cluster c
-        own = A[idx, part]
-        A_other = A.copy()
-        A_other[idx, part] = -np.inf
-        best_to = np.argmax(A_other, axis=1)
-        want = A_other[idx, best_to] - own     # >0: node wants to move
-
-        movers = np.where(want > 1e-12)[0]
-        if len(movers) == 0:
-            break
-        # bucket movers by (from_cluster, to_cluster), each sorted by gain desc
-        buckets = defaultdict(list)
-        for n in movers:
-            buckets[(int(part[n]), int(best_to[n]))].append((float(want[n]), int(n)))
-        for k in buckets:
-            buckets[k].sort(reverse=True)
-
+        A = W @ oh                       # A[n,c] = weight from n into cluster c
         locked = np.zeros(N_, dtype=bool)
         n_swaps = 0
-        # pair opposite-direction movers between each unordered cluster pair
-        for (a, b) in list(buckets.keys()):
-            if a >= b or (b, a) not in buckets:
+        for k in rng.permutation(len(pairs)):
+            a, b = pairs[k]
+            ma, mb = members[a], members[b]
+            ma = ma[~locked[ma]]
+            mb = mb[~locked[mb]]
+            if len(ma) == 0 or len(mb) == 0:
                 continue
-            la, lb = buckets[(a, b)], buckets[(b, a)]
-            ia = ib = 0
-            while ia < len(la) and ib < len(lb):
-                ga, na = la[ia]
-                gb, nb = lb[ib]
-                if locked[na]:
-                    ia += 1; continue
-                if locked[nb]:
-                    ib += 1; continue
-                # combined gain, correcting for the a-b edge counted in both
-                if ga + gb - 2.0 * W[na, nb] > 1e-12:
-                    part[na], part[nb] = b, a
-                    locked[na] = locked[nb] = True
-                    n_swaps += 1
-                    ia += 1; ib += 1
-                else:
-                    break   # gains are sorted desc; nothing better remains
+            # exact swap gain for every (na, nb) pair in this cluster pair
+            G = ((A[ma, b] - A[ma, a])[:, None]
+                 + (A[mb, a] - A[mb, b])[None, :]
+                 - 2.0 * W[np.ix_(ma, mb)])
+            f = int(np.argmax(G))
+            i_, j_ = divmod(f, G.shape[1])
+            if G[i_, j_] <= 1e-12:
+                continue
+            na, nb = int(ma[i_]), int(mb[j_])
+            part[na], part[nb] = b, a
+            members[a] = np.where(part == a)[0]
+            members[b] = np.where(part == b)[0]
+            locked[na] = locked[nb] = True
+            n_swaps += 1
         if n_swaps == 0:
             break
+    if permute:
+        out = np.empty(N_, dtype=int)
+        out[perm] = part
+        return out
     return part
 
 
@@ -416,8 +435,11 @@ if __name__ == "__main__":
         # component). Confirm KL reaches it before trusting placement.
         print("\n--- real-scale optimality (N={}, {} clusters of {}) ---".format(
             N, N_CORES, NEURONS_PER_CORE))
-        cids_full = np.repeat(np.arange(NC), N // NC)
-        np.random.default_rng(0).shuffle(cids_full)
+        print("    Tested on BOTH node orderings. This check originally used only")
+        print("    the shuffled ordering, while make_placement_spinemap calls the")
+        print("    partitioner with type-SORTED labels -- and the old greedy stalled")
+        print("    at the random-partition cut on exactly that input. Never audit an")
+        print("    algorithm on an input the deployed path does not use.")
 
         def per_type_optimum(sizes_per_group):
             # a fully-connected group of g nodes tiled into clusters of csz:
@@ -429,24 +451,41 @@ if __name__ == "__main__":
                 tot += g * (g - 1) / 2 - internal
             return tot
 
-        for mode in ("population", "functional"):
-            W = build_synapse_graph(cids_full, mode)
-            part = spinecluster(W, NEURONS_PER_CORE, N_CORES, seed=0, restarts=4)
-            cut = inter_cluster_cut(W, part)
-            if mode == "population":
-                groups = [np.sum(cids_full == c) for c in range(NC)]
-            else:
-                groups = [360, 360, 180]  # {0,3}, {1,4}, {2}
-            opt = per_type_optimum(groups)
-            sizes = np.bincount(part, minlength=N_CORES)
-            print("  {:>11}: KL cut = {:.0f}, theoretical optimum = {:.0f}, "
-                  "gap = {:+.1%}, balanced = {}".format(
-                      mode, cut, opt, (cut - opt) / opt, bool(np.all(sizes == NEURONS_PER_CORE))))
+        ok_real = True
+        for order in ("sorted", "shuffled"):
+            cids_full = np.repeat(np.arange(NC), N // NC)
+            if order == "shuffled":
+                np.random.default_rng(0).shuffle(cids_full)
+            for mode in ("population", "functional"):
+                W = build_synapse_graph(cids_full, mode)
+                part = spinecluster(W, NEURONS_PER_CORE, N_CORES, seed=0, restarts=2)
+                cut = inter_cluster_cut(W, part)
+                if mode == "population":
+                    groups = [np.sum(cids_full == c) for c in range(NC)]
+                else:
+                    groups = [360, 360, 180]  # {0,3}, {1,4}, {2}
+                opt = per_type_optimum(groups)
+                sizes = np.bincount(part, minlength=N_CORES)
+                # random-partition reference: if KL/random ~ 1 the step is inert
+                rc = []
+                for s in range(30):
+                    rp = np.repeat(np.arange(N_CORES), NEURONS_PER_CORE)
+                    np.random.default_rng(s).shuffle(rp)
+                    rc.append(inter_cluster_cut(W, rp))
+                purity = np.mean([np.bincount(cids_full[part == c], minlength=NC).max()
+                                  / NEURONS_PER_CORE for c in range(N_CORES)])
+                balanced = bool(np.all(sizes == NEURONS_PER_CORE))
+                ok_real &= balanced and (cut - opt) / opt < 1e-9
+                print("  {:>8}/{:<11}: cut = {:.0f}, optimum = {:.0f}, gap = {:+.2%}, "
+                      "KL/random = {:.4f}, purity = {:.3f}, balanced = {}".format(
+                          order, mode, cut, opt, (cut - opt) / opt,
+                          cut / np.mean(rc), purity, balanced))
 
         print("\nVERDICT: KL cut should be far below random for both modes,")
         print("sizes balanced, our bisection cut matching networkx's, and the")
-        print("real-scale cut at (or very near) the theoretical optimum.")
-        sys.exit(0)
+        print("real-scale cut AT the theoretical optimum for BOTH node orderings.")
+        print("real-scale verdict: {}".format("PASS" if ok_real else "FAIL"))
+        sys.exit(0 if ok_real else 1)
 
     # ============================================================
     # FULL BENCHMARK: SpiNeMap vs our three hand-rolled conditions

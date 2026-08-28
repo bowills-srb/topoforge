@@ -99,6 +99,29 @@ correct until checked.
    logical nesting mistakes. Print/count how often a block actually
    executes rather than assuming an edit landed correctly.
 
+7. **Audit an algorithm on the input the deployed path actually
+   feeds it, not a convenient variant of it.** Exp 38's SpiNeCluster
+   (Kernighan-Lin partitioning) was validated by `--sanity-cluster`
+   on type-*shuffled* neuron labels, where it reached the exact
+   optimal cut. But `make_placement_spinemap` calls it with type-
+   *sorted* labels, and on that input the same greedy stalled 6.4%
+   above the optimum — at essentially the random-partition cut
+   (KL/random = 0.9965, mean cluster type-purity 0.38, 1 of 60 cores
+   pure). The published "SpiNeMap lands near interleaved" result was
+   therefore measured on a partition that had barely partitioned. Two
+   things made it easy to miss: the sanity check used a different
+   input distribution than the deployment path, and the cut's dynamic
+   range on this graph is narrow (even the exact optimum is only 6%
+   below random), so an absolute cut number looks plausible on its
+   own. Fixed by (a) exhaustive best-swap search within each cluster
+   pair — the old top-gain pairing was unsound because the combined
+   gain subtracts `2*W[na,nb]` and so is not monotone in the
+   individual gains — and (b) an internal random node relabeling, so
+   caller node order cannot determine the result. The check now runs
+   both orderings, asserts gap == 0 vs the theoretical optimum, and
+   prints KL/random and cluster purity — a ratio-to-baseline, not
+   just an absolute score.
+
 6. **If a new file's behavior differs from a known-working reference
    on identical inputs, A/B them directly** — call the same function
    from both contexts on the same data — rather than theorizing about
@@ -133,22 +156,30 @@ correct until checked.
   The magnitude is regime-dependent (~3.6x-7.3x with training exposure),
   not a single fixed number. Preprint, README, and the exp37b docstring
   were all reconciled to this.
-- **Most recent completed result (Exp 38)**: closed the "invented
-  baseline" gap. SpiNeMap (Balaji et al., arXiv:1909.01843) has no
-  public code, so its published two-step algorithm was implemented from
-  scratch — SpiNeCluster (greedy Kernighan-Lin partitioning) +
-  SpiNePlacer (particle-swarm placement) — and run through the PLB.
-  Finding: SpiNeMap does NOT reproduce our pathological segregated
-  baseline. It lands 86-89% of the way toward interleaved (~4x more
-  learned structure than our segregated condition), because minimizing
-  communication energy COMPACTS populations rather than spreading
-  correlated types apart. This SHARPENED the paper's claim rather than
-  breaking it: the penalty attaches to segregation of correlated neurons
-  specifically, not to wire-length optimization in the abstract. The
-  "every mapping tool optimizes the wrong objective" rhetoric in the
-  abstract, README, and exp32b was softened to match. Caveat logged in
-  Section 6: the result is geometry-dependent (core pitch = plasticity
-  radius here); a sparser fabric could re-incur the penalty.
+- **Exp 38 (SpiNeMap), corrected**: closed the "invented baseline" gap.
+  SpiNeMap (Balaji et al., arXiv:1909.01843) has no public code, so its
+  published two-step algorithm was implemented from scratch —
+  SpiNeCluster (Kernighan-Lin partitioning) + SpiNePlacer
+  (particle-swarm placement) — and run through the PLB. The FIRST
+  version of this result was wrong: the partitioner stalled on
+  type-sorted input (the input the placement path actually uses) and
+  was benchmarked as a near-random placement, which made SpiNeMap look
+  like it landed near interleaved. See gotcha #7. With the partitioner
+  fixed (exact optimal cut on both node orderings, purity 1.000 on the
+  population graph), the finding REVERSES: on the population graph —
+  the graph a mapper actually has at map time, since the associations
+  do not exist as synapses until learned — SpiNeMap lands 7.7% of the
+  way from segregated toward interleaved (903.8 +/- 61.2 vs 2952.9 +/-
+  29.1 interleaved, 3.27x, p = 9.9e-20), i.e. it DOES reproduce the
+  pathological placement. On the functional graph (associations
+  declared up front) it lands at 101.2%, indistinguishable from
+  interleaved. The decisive variable is the graph the optimizer is
+  given, not the objective it minimizes. This strengthens the paper's
+  claim: the segregated baseline is a stand-in for a deployed tool's
+  output, not a strawman. Preprint abstract, Section 4.6, Discussion
+  and Limitations were rewritten; a stale Table 4 that disagreed with
+  Section 4.1 on the same conditions (686/2926 vs 731.8/2952.9) was
+  reconciled at the same time.
 - **Open, honestly-unresolved thread**: an "inverted-U" finding in
   Exp 35's timing-jitter sweep (moderate jitter beats both perfect
   synchrony and high jitter) survived three separate mechanism

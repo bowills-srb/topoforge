@@ -28,13 +28,16 @@ spike-encoded human speech (Spiking Heidelberg Digits), where an
 adjacency-matched, twelve-seed comparison shows a segregated-placement
 learning penalty of roughly 3.6x-7.3x depending on training-exposure
 regime (7.25x, 95% CI [5.05x, 11.48x], at the validated regime;
-Welch p = 3.2×10⁻¹⁴). The penalty is a property of segregation
-specifically, not of wire-length optimization in general: a
-from-scratch reimplementation of a published mapping tool (SpiNeMap)
-compacts populations rather than segregating them and lands near
-interleaved placement, yielding roughly four times the learned
-structure of our segregated baseline — so a deployed mapper need not
-incur the penalty our hand-rolled baseline exhibits. We report effect
+Welch p = 3.2×10⁻¹⁴). The penalty is not confined to a
+baseline of our own construction: a from-scratch reimplementation of
+a published mapping tool (SpiNeMap), given the connectivity graph it
+actually has at map time — one that cannot contain associations
+plasticity has yet to build — produces a placement that learns 3.3x
+less than interleaved and sits only 8% of the way from our segregated
+baseline toward interleaved. The same optimizer becomes harmless when
+the to-be-learned associations are declared to it up front, which
+locates the problem in the graph a mapper is given rather than in
+wire-length optimization as such. We report effect
 sizes, statistical tests,
 and — in a dedicated Limitations section — the specific respects in
 which this evidence should and should not be trusted at its current
@@ -314,11 +317,13 @@ We report one further honest caveat, quantified more precisely now than in earli
 
 ### 4.6 Generalization test 4: a real mapping tool (SpiNeMap)
 
-The preceding three tests stress the effect itself; this one addresses a different objection — that our "segregated" condition is a baseline we constructed rather than the output of a mapping tool anyone deploys. SpiNeMap (Balaji et al., arXiv:1909.01843) releases no code, so we implemented its published two-step algorithm from scratch: **SpiNeCluster**, a greedy Kernighan-Lin partitioning that minimizes inter-cluster (global) synapse count with clusters sized to a core's capacity; and **SpiNePlacer**, a particle-swarm optimization that assigns clusters to physical cores to minimize communication cost. Both were validated before use, per this project's audit-before-trust convention: the partitioner reaches the theoretical minimum cut on the benchmark graph and matches networkx's independent Kernighan-Lin bisection, and the placer reduces wire energy to 0.42-0.46x of a random assignment. We then ran SpiNeMap's placement through the identical Placement-Learning Benchmark, ten seeds, alongside our three hand-built conditions.
+The preceding three tests stress the effect itself; this one addresses a different objection — that our "segregated" condition is a baseline we constructed rather than the output of a mapping tool anyone deploys. SpiNeMap (Balaji et al., arXiv:1909.01843) releases no code, so we implemented its published two-step algorithm from scratch: **SpiNeCluster**, a Kernighan-Lin partitioning that minimizes inter-cluster (global) synapse count with clusters sized to a core's capacity; and **SpiNePlacer**, a particle-swarm optimization that assigns clusters to physical cores to minimize communication cost. We then ran SpiNeMap's placement through the identical Placement-Learning Benchmark, ten seeds, alongside our three hand-built conditions.
 
-Because a plastic network's cross-type associations do not exist as synapses until they are learned, the connectivity graph a mapper is given matters, and we tested both bounds: a **population** graph (intra-type synapses only — the structure realistically known before plasticity) and a **functional** graph (additionally including the to-be-learned association synapses — an upper bound rarely available in practice).
+Because a plastic network's cross-type associations do not exist as synapses until they are learned, the connectivity graph a mapper is given matters, and we tested both bounds: a **population** graph (intra-type synapses only — the structure realistically known before plasticity runs) and a **functional** graph (additionally including the to-be-learned association synapses — an upper bound rarely available in practice).
 
-A structural audit before any learning confirms the placements differ as intended (Table 3): our segregated baseline places none of each source type's neurons within the plasticity radius of an associated partner, whereas both SpiNeMap variants place essentially all of them there — indistinguishable from interleaved and random on this measure.
+*Correction note.* An earlier version of this section reported that both SpiNeMap variants landed near interleaved placement. That result was wrong, and the error is instructive enough to state plainly. Our partitioner was validated on type-*shuffled* neuron labels, where it reaches the exact theoretical minimum cut; the placement path calls it with type-*sorted* labels, and on that input the greedy stalled 6.4% above the optimum — at essentially the random-partition cut (KL/random = 0.9965), producing clusters of mean type-purity 0.38 with 1 of 60 cores pure. The clustering step was, in effect, not running, so what we had benchmarked was a near-random placement rather than SpiNeMap. Two properties of this graph made the failure easy to miss: the audit used an input distribution the deployed path never sees, and the cut has narrow dynamic range (even the exact optimum lies only 6% below random), so the absolute cut value looked plausible on its own. The partitioner now searches swaps exhaustively within each cluster pair and randomizes node order internally; it attains the exact optimum on both orderings, both graph modes, and every seed, with balanced clusters and type-purity 1.000 on the population graph. The audit now runs the deployed ordering and asserts a zero gap against the theoretical optimum. All numbers below are from the corrected implementation.
+
+A structural audit before any learning (Table 3) shows what the corrected mapper actually does. Minimizing inter-cluster synapse count on the population graph makes cores type-*pure* — that is precisely the optimal partition when the only edges are intra-type — so a neuron in a core's interior has no associated partner within the plasticity radius at all, and only neurons near a core boundary do. On the functional graph, where the associations are declared, the optimal partition instead packs associated types into the same core, and every neuron has partners in reach.
 
 **Table 3.** Fraction of source-type neurons with an associated-partner neuron within the plasticity radius, before learning (N=900).
 
@@ -327,22 +332,24 @@ A structural audit before any learning confirms the placements differ as intende
 | Random | 100.0% | 100.0% |
 | Segregated (ours) | 0.0% | 0.0% |
 | Interleaved (ours) | 100.0% | 100.0% |
-| SpiNeMap — population graph | 98.9% | 98.9% |
-| SpiNeMap — functional graph | 99.4% | 100.0% |
+| SpiNeMap — population graph | 71.1% | 66.7% |
+| SpiNeMap — functional graph | 100.0% | 100.0% |
 
-Learning quality follows that structure (Table 4). Both SpiNeMap variants land 86-89% of the way from our segregated baseline toward interleaved — among the good conditions, not the pathological one — producing roughly four times the learned structure of our segregated condition (Cohen's d ≈ 47-54 against segregated, of the low-noise character discussed in Section 3.4). The result is robust to the graph supplied (both variants land near interleaved) and to the placement seed (cross-type adjacency 94-100% across placement seeds).
+Learning quality follows that structure, and the two graph conditions fall on opposite sides of the benchmark (Table 4). On the population graph — the honest map-time case — SpiNeMap lands 7.7% of the way from our segregated baseline toward interleaved: it learns 3.27x less than interleaved placement (903.8 ± 61.2 vs 2952.9 ± 29.1; Welch t(12.0) = −95.6, p = 9.9×10⁻²⁰, d = 42.8), statistically distinguishable from our hand-rolled segregated condition but only 1.24x above it. On the functional graph it lands at 101.2% — indistinguishable from interleaved for practical purposes (2980.6 ± 16.6, a 0.9% difference that is nominally significant at p = 0.02 only because of the simulation's very low noise).
 
-**Table 4.** Learning quality (taught mass after the plastic phase), mean ± s.d. over ten seeds, N=900.
+**Table 4.** Learning quality (taught mass after the plastic phase), mean ± s.d. over ten seeds, N=900. Position is on the segregated → interleaved axis, where 0% is our segregated baseline and 100% is interleaved.
 
-| Placement | Taught mass | vs. segregated | vs. interleaved |
+| Placement | Taught mass | vs. segregated | Position |
 |---|---|---|---|
-| Random | 2740 ± 23 | +299% | −6% |
-| Segregated (ours) | 686 ± 5 | — | −77% |
-| Interleaved (ours) | 2926 ± 26 | +326% | — |
-| SpiNeMap — population graph | 2604 ± 58 | +279% | −11% |
-| SpiNeMap — functional graph | 2678 ± 52 | +290% | −8% |
+| Segregated (ours) | 731.8 ± 6.0 | — | 0% |
+| SpiNeMap — population graph | 903.8 ± 61.2 | +23% | 7.7% |
+| Random | 2733.2 ± 25.9 | +274% | 90.1% |
+| Interleaved (ours) | 2952.9 ± 29.1 | +304% | 100% |
+| SpiNeMap — functional graph | 2980.6 ± 16.6 | +307% | 101.2% |
 
-The mechanism is that minimizing communication energy *compacts* each population rather than spreading correlated types apart; at this benchmark's core pitch — equal to the plasticity radius — that compaction leaves correlated neurons within reach, so associations still form. This sharpens the paper's central claim rather than weakening it: the penalty attaches to spatial segregation of functionally correlated neurons specifically, not to wire-length optimization in general. Our hand-rolled segregated baseline is therefore more pathological than a real mapping tool, a limitation we take up directly, with its scope and geometry-dependence, in Section 6.
+The conclusion is the opposite of what we previously reported, and it strengthens rather than weakens the paper's central claim. A published, communication-minimizing mapping tool, given the connectivity graph it actually has at map time, **does** produce the pathological placement: our hand-rolled segregated baseline is not a strawman but a close stand-in for what such a tool emits on a plastic substrate. What rescues SpiNeMap is not its objective but its input — declaring the to-be-learned associations up front moves it the entire way to interleaved. This is a sharper and more actionable statement of the problem than "wire-length optimization is harmful": the harm comes from optimizing a communication objective over a graph that omits the associations plasticity has yet to build, and the same optimizer becomes harmless the moment those associations are in the graph it is given. Since a plastic system's whole purpose is to learn associations that were not known at map time, the population-graph case is the one that matters in practice.
+
+(One internal inconsistency is also corrected here: an earlier Table 4 reported 686 ± 5 and 2926 ± 26 for the segregated and interleaved conditions, which disagreed with the same conditions in Section 4.1. The values above were freshly reproduced and match Section 4.1 exactly.)
 
 ### 4.7 Dose-response and mediation: the reachable correlated fraction
 
@@ -395,8 +402,10 @@ ways we believe are individually explicable rather than arbitrary.
 Section 4.6 addresses a fourth objection of a different kind — not
 whether the effect is real but whether our segregated baseline
 represents a tool anyone deploys — by running SpiNeMap's actual
-algorithm through the same benchmark; we take up what it implies for
-the central claim in Section 6. Section 4.7 then moves from *whether*
+algorithm through the same benchmark, and finds that it does: given
+the map-time graph, the published tool lands next to our segregated
+condition, and is rescued only by being told the associations in
+advance. Section 4.7 then moves from *whether*
 to *how*: interpolating continuously between the conditions shows the
 effect is a monotonic dose-response mediated by a single placement-only
 quantity — the reachable correlated fraction — onto which the K=2 and
@@ -412,13 +421,18 @@ optimizing purely for communication energy, applied to hardware with
 active structural plasticity, can be harmful to the network's ability
 to learn — the two objectives are not merely independent but can trade
 off directly, with our synthetic and real-data results suggesting the
-learning cost can substantially exceed any energy benefit gained. The
-harm is not automatic, however: as Section 4.6 shows, a
-communication-minimizing tool that compacts rather than spreads
-correlated populations can avoid it entirely. The risk is specific to
-placements that separate correlated populations beyond the reach of
-local plasticity — a property a plasticity-aware mapper could check
-for and, in principle, optimize against.
+learning cost can substantially exceed any energy benefit gained. This
+is not a hypothetical failure mode of a baseline we invented: Section
+4.6 shows a published tool incurring it on the graph it actually has
+at map time. What determines the outcome is the information the
+optimizer is given, not the objective it minimizes — the same tool
+lands at interleaved when the to-be-learned associations are declared
+to it. Since a plastic substrate exists precisely to learn
+associations unknown at map time, that information is normally
+missing, and the risk is therefore the default case rather than the
+exception. It is also checkable: the placement-only reach statistic of
+Section 4.7 is computable before deployment, so a plasticity-aware
+mapper could constrain against it directly.
 
 ---
 
@@ -431,19 +445,23 @@ trusted, rather than defending it.*
 **Baseline fidelity.** Our "segregated" placement condition is our
 own wire-length-minimizing heuristic, not the output of a published
 mapping tool. Section 4.6 addresses this directly: we implemented
-SpiNeMap's actual algorithm and found it does *not* reproduce our
-pathological baseline — it lands near interleaved, roughly 4x above
-our segregated condition. Two consequences for how this paper's
-central number should be read. First, our hand-rolled 4x baseline is
-more pathological than a real tool; it should be read as the penalty a
-naive type-segregation incurs, not one a deployed mapper like SpiNeMap
-necessarily produces. Second, the effect is geometry-dependent:
-SpiNeMap avoids the penalty here because it compacts populations and
-our core pitch equals the plasticity radius, so correlated neurons
-stay within reach; on a sparser fabric, or with inter-core distances
-large relative to the plasticity radius, even a communication-
-minimizing placer could separate populations enough to re-incur it.
-Quantifying that crossover is future work.
+SpiNeMap's actual algorithm and found that, on the population graph
+available at map time, it *does* reproduce the pathological
+placement — 3.27x below interleaved, only 7.7% of the way from our
+segregated baseline toward it. Our hand-rolled baseline is therefore
+a reasonable stand-in for a deployed tool's output on a plastic
+substrate, not a strawman, though it remains somewhat more extreme
+(SpiNeMap's placement is 1.24x above it, and unlike ours leaves
+roughly 70% of correlated neurons with at least one partner in
+reach). The decisive variable is the graph the mapper is given: with
+the to-be-learned associations declared up front, the same tool lands
+at interleaved. A previous version of this section drew the opposite
+conclusion from a partitioner that had silently failed on the input
+the placement path uses; the error, its cause, and the fix are
+documented in Section 4.6. That episode is itself a limitation worth
+stating: these results rest on a single implementation, and one
+load-bearing component of it was wrong for a period without any
+result looking anomalous.
 
 **Task and scale realism.** All synthetic results (Sections 4.1-4.4)
 use hand-designed stimulus patterns at N=900-5,000. Experiment 33's

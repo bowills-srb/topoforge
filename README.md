@@ -4,7 +4,7 @@
 
 **Headline result:** Segregated placement — grouping functionally-correlated neurons into separate cores — produces a **4.0x learning penalty** compared to interleaved placement, with **zero energy penalty** during frozen inference. Consistent from N=900 to N=5,000, 10 seeds each.
 
-The penalty is a property of *segregation specifically*, not wire-length optimization in general: a faithful from-scratch reimplementation of SpiNeMap (a real mapping tool) compacts populations rather than segregating them, and lands near interleaved — ~4x better than our segregated baseline. See `src/experiments/exp38_spinemap_baseline.py` and the preprint's Limitations.
+The penalty is not confined to a baseline of our own construction: a faithful from-scratch reimplementation of SpiNeMap (a real mapping tool), given the connectivity graph it actually has at map time, produces a placement that learns 3.27x less than interleaved and sits only 7.7% of the way from our segregated baseline toward it. The same tool lands at interleaved when the to-be-learned associations are declared to it up front — so the harm comes from the graph the optimizer is given, not from wire-length optimization as such. See `src/experiments/exp38_spinemap_baseline.py` and the preprint's Section 4.6.
 
 **Real-data generalization:** the same penalty appears on real spike-encoded human speech (Spiking Heidelberg Digits). A 12-seed, adjacency-matched comparison shows a **3.6x–7.3x** penalty depending on training-exposure regime (7.25x, 95% CI [5.05x, 11.48x], at the validated regime; Welch p = 3.2×10⁻¹⁴). See `src/experiments/exp37c_real_data_scaled.py`.
 
