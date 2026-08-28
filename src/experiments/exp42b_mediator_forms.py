@@ -134,9 +134,7 @@ def main(path):
     print("Pooled across ALL placement families and pitches -- does the form")
     print("collapse them onto one curve?")
     print("=" * 78)
-    print("  {:<8} {:>10} {:>12} {:>12} {:>14}".format(
-        "form", "Pearson R2", "Spearman rho", "log-fit R2", "verdict"))
-    best, best_r2 = None, -1.0
+    scored = {}
     for f in FORMS:
         x = np.array([r[f] for r in rows])
         pr = stats.pearsonr(x, y)[0] ** 2
@@ -144,13 +142,49 @@ def main(path):
         # a saturating form is expected (learning cannot grow without bound),
         # so also fit against log(1+x)
         lr = stats.pearsonr(np.log1p(x), y)[0] ** 2
-        score = max(pr, lr)
-        if score > best_r2:
-            best, best_r2 = f, score
+        scored[f] = (pr, sr, lr, max(pr, lr))
+    best = max(FORMS, key=lambda f: scored[f][3])
+    print("  {:<8} {:>10} {:>12} {:>12} {:>14}".format(
+        "form", "Pearson R2", "Spearman rho", "log-fit R2", "verdict"))
+    for f in FORMS:
+        pr, sr, lr, _ = scored[f]
         print("  {:<8} {:>10.3f} {:>12.3f} {:>12.3f} {:>14}".format(
-            f, pr, sr, lr, "<-- best" if f == best and score == best_r2 else ""))
+            f, pr, sr, lr, "<-- best" if f == best else ""))
 
-    print("\n  Best-collapsing form: {} (R^2 = {:.3f})".format(best, best_r2))
+    print("\n  Best-collapsing form: {} (R^2 = {:.3f})".format(best, scored[best][3]))
+
+    # --- how much of the story is coverage, how much is pool size? ---
+    print("\n" + "=" * 78)
+    print("Two-term model: does pool SIZE still matter once coverage is known?")
+    print("=" * 78)
+    cov = np.array([r["cover"] for r in rows])
+    lcnt = np.log1p(np.array([r["count"] for r in rows]))
+    X = np.column_stack([np.ones(len(y)), cov, lcnt])
+    beta, *_ = np.linalg.lstsq(X, y, rcond=None)
+    pred = X @ beta
+    r2_both = 1 - ((y - pred) ** 2).sum() / ((y - y.mean()) ** 2).sum()
+    r2_cov = stats.pearsonr(cov, y)[0] ** 2
+    r2_cnt = stats.pearsonr(lcnt, y)[0] ** 2
+    print("  R^2  coverage alone      : {:.3f}".format(r2_cov))
+    print("  R^2  log-count alone     : {:.3f}".format(r2_cnt))
+    print("  R^2  both together       : {:.3f}  (coefficients: cover {:+.0f}, "
+          "log-count {:+.0f})".format(r2_both, beta[1], beta[2]))
+    print("  -> coverage adds {:+.3f} R^2 over log-count alone; log-count adds "
+          "{:+.3f} over coverage alone".format(r2_both - r2_cnt, r2_both - r2_cov))
+
+    # within-family control: interleaved holds coverage at 1.0 at every pitch,
+    # so its spread isolates the residual effect of pool size.
+    fam = [r for r in rows if r["strategy"] == "topoforge"]
+    if len(fam) > 2:
+        c0 = [r["count"] for r in fam]
+        t0 = [r["taught"] for r in fam]
+        print("\n  Within interleaved (coverage pinned at 1.000 at every pitch):")
+        print("    count {:.2f} -> {:.2f} ({:.1f}x) changes learning {:.0f} -> {:.0f} "
+              "({:.2f}x)".format(max(c0), min(c0), max(c0) / max(min(c0), 1e-9),
+                                 max(t0), min(t0), max(t0) / max(min(t0), 1e-9)))
+        print("    -> pool size has a real but strongly SATURATING residual effect:")
+        print("       a 10x cut in reachable partners costs ~1.5x learning, whereas")
+        print("       losing coverage entirely costs ~4x.")
     print("\n  The discriminating comparison is any pair with similar `count` but")
     print("  different `cover`: if learning tracks cover there, the mediator is")
     print("  the fraction of correlated neurons REACHED AT ALL, not the mean")

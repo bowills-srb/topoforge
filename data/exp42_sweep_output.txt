@@ -1,0 +1,45 @@
+==========================================================================
+EXP 42: FABRIC-SPARSITY CROSSOVER 
+plasticity radius fixed at 5.0; core pitch swept [2.5, 5.0, 6.25, 7.5, 10.0, 15.0]
+4 strategies x 6 pitches x 8 seeds = 192 runs
+==========================================================================
+
+  TOPOFORGE -- interleaved (control)
+    rho=0.5 (pitch  2.5)  reach= 29.59  taught=   3029 +/-     21  relearn=    84  (405s)
+    rho=1.0 (pitch  5.0)  reach=  7.80  taught=   2958 +/-     30  relearn=   210  (110s)
+    rho=1.2 (pitch  6.2)  reach=  3.68  taught=   2279 +/-     23  relearn=   433  (33s)
+    rho=1.5 (pitch  7.5)  reach=  3.00  taught=   2035 +/-     18  relearn=   491  (33s)
+    rho=2.0 (pitch 10.0)  reach=  3.00  taught=   2039 +/-      8  relearn=   493  (33s)
+    rho=3.0 (pitch 15.0)  reach=  3.00  taught=   2039 +/-      8  relearn=   493  (36s)
+
+  SPINEMAP-POPULATION -- SpiNeMap (population graph)
+    rho=0.5 (pitch  2.5)  reach= 36.78  taught=   1595 +/-     90  relearn=    34  (336s)
+    rho=1.0 (pitch  5.0)  reach=  6.34  taught=    904 +/-     69  relearn=    33  (64s)
+    rho=1.2 (pitch  6.2)  reach=  0.84  taught=    753 +/-     19  relearn=   202  (31s)
+    rho=1.5 (pitch  7.5)  reach=  0.01  taught=    733 +/-      3  relearn=   223  (22s)
+    rho=2.0 (pitch 10.0)  reach=  0.00  taught=    730 +/-     10  relearn=   225  (24s)
+    rho=3.0 (pitch 15.0)  reach=  0.00  taught=    730 +/-     10  relearn=   225  (25s)
+
+  SPINEMAP-FUNCTIONAL -- SpiNeMap (functional graph)
+    rho=0.5 (pitch  2.5)  reach= 50.94  taught=   3017 +/-     35  relearn=    91  (274s)
+    rho=1.0 (pitch  5.0)  reach= 15.13  taught=   2980 +/-     19  relearn=   138  (62s)
+    rho=1.2 (pitch  6.2)  reach=  8.07  taught=   2982 +/-     22  relearn=   586  (27s)
+    rho=1.5 (pitch  7.5)  reach=  6.95  taught=   2987 +/-     15  relearn=   774  (23s)
+    rho=2.0 (pitch 10.0)  reach=  6.94  taught=   2974 +/-     18  relearn=   784  (22s)
+    rho=3.0 (pitch 15.0)  reach=  6.94  taught=   2974 +/-     18  relearn=   784  (22s)
+
+  VLSI -- segregated (our baseline)
+    rho=0.5 (pitch  2.5)  reach=  0.01  taught=    752 +/-     11  relearn=     1  (246s)
+    rho=1.0 (pitch  5.0)  reach=  0.00  taught=    733 +/-      6  relearn=    38  (60s)
+    rho=1.2 (pitch  6.2)  reach=  0.00  taught=    731 +/-      5  relearn=   166  (26s)
+    rho=1.5 (pitch  7.5)  reach=  0.00  taught=    730 +/-      5  relearn=   220  (21s)
+    rho=2.0 (pitch 10.0)  reach=  0.00  taught=    732 +/-      5  relearn=   220  (22s)
+    rho=3.0 (pitch 15.0)  reach=  0.00  taught=    732 +/-      5  relearn=   220  (22s)
+Traceback (most recent call last):
+  File "C:\Users\Bo\projects\neuromorphic-sandbox\src\experiments\exp42_fabric_sparsity_crossover.py", line 339, in <module>
+    print("Exp 38 result is regime-specific: a communication-minimizing mapper")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Bo\projects\neuromorphic-sandbox\src\experiments\exp42_fabric_sparsity_crossover.py", line 237, in report
+    """Persist every measurement BEFORE any analysis runs. A 50-minute sweep
+    ^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'scipy'

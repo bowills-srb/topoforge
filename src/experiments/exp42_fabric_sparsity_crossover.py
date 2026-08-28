@@ -233,8 +233,32 @@ def run(seeds, pitches):
     return rows, reach_of, energy_of
 
 
+def dump_json(rows, reach_of, energy_of, pitches, path="exp42_results.json"):
+    """Persist every measurement BEFORE any analysis runs. A 50-minute sweep
+    should never be lost to an import error or a stats bug in the report."""
+    import json
+    out = []
+    for (strat, pitch), (taught, relearn) in rows.items():
+        out.append({"strategy": strat, "pitch": pitch,
+                    "rho": pitch / PLASTICITY_RADIUS,
+                    "reach": reach_of[(strat, pitch)],
+                    "wire_d2": energy_of[(strat, pitch)],
+                    "taught": taught.tolist(), "relearn": relearn.tolist()})
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(out, f, indent=1)
+    print("")
+    print("  raw results written to {}".format(path))
+
+
 def report(rows, reach_of, energy_of, pitches):
-    from scipy import stats
+    try:
+        from scipy import stats
+    except ImportError:
+        print("")
+        print("  scipy not available in this interpreter -- raw results are")
+        print("  saved; run the analysis with the checked-in venv:")
+        print("    venv/Scripts/python.exe src/experiments/exp42b_mediator_forms.py <output.txt>")
+        return
 
     print("\n" + "=" * 74)
     print("TABLE -- learning (taught mass) vs fabric sparsity")
@@ -336,5 +360,6 @@ if __name__ == "__main__":
     print("=" * 74)
     t0 = time.time()
     rows, reach_of, energy_of = run(seeds, pitches)
+    dump_json(rows, reach_of, energy_of, pitches)
     report(rows, reach_of, energy_of, pitches)
     print("\ntotal {:.0f}s".format(time.time() - t0))

@@ -37,7 +37,11 @@ less than interleaved and sits only 8% of the way from our segregated
 baseline toward interleaved. The same optimizer becomes harmless when
 the to-be-learned associations are declared to it up front, which
 locates the problem in the graph a mapper is given rather than in
-wire-length optimization as such. We report effect
+wire-length optimization as such. Sweeping the fabric's core pitch
+against the plasticity radius shows the penalty saturating to its full
+magnitude beyond a pitch of roughly 1.5 radii, while an
+association-aware mapper is unharmed at every density tested and, on
+sparse fabrics, outperforms uniform interleaving by 1.46x. We report effect
 sizes, statistical tests,
 and — in a dedicated Limitations section — the specific respects in
 which this evidence should and should not be trusted at its current
@@ -373,7 +377,7 @@ Two predictions were registered before running. First, a **dose-response**: tota
 | 2 | 1.00 | 37.3 | 1.00 |
 | 4 | 1.00 | 38.7 | 1.00 |
 
-We read this as evidence that placement affects learning through a single mediating quantity — the fraction of correlated pairs the local plasticity rule can physically reach — rather than through anything specific to a given geometry, task, or class count. On one curve it accounts for why removing geometry still leaves an effect (Section 4.3), why a communication-minimizing mapper that compacts populations lands near interleaved (Section 4.6), and why the penalty's magnitude shifts with regime (Section 4.5): each changes reach. One honest limit remains at this point: in the sweep, reach is *measured*, not manipulated while holding all other geometric properties fixed, so the evidence so far is correlational. We resolve that next with a controlled dissociation.
+We read this as evidence that placement affects learning through a single mediating quantity — the fraction of correlated pairs the local plasticity rule can physically reach — rather than through anything specific to a given geometry, task, or class count. (Section 4.8 revisits how that quantity should be *measured*: across a wider set of placement families, the mean-count form used here fails, and a coverage form succeeds. The mediation claim survives; the metric is refined.) On one curve it accounts for why removing geometry still leaves an effect (Section 4.3), why a communication-minimizing mapper that compacts populations lands near interleaved (Section 4.6), and why the penalty's magnitude shifts with regime (Section 4.5): each changes reach. One honest limit remains at this point: in the sweep, reach is *measured*, not manipulated while holding all other geometric properties fixed, so the evidence so far is correlational. We resolve that next with a controlled dissociation.
 
 To turn the mediation from correlational to causal, we manipulated reach and the most obvious confound — whether output classes are spatially clustered or mixed — as two independent factors. Reach was set by rigidly translating the output population a distance from the input population, which changes input–output distances while preserving input–input and output–output structure exactly. Class arrangement was set by assigning class labels to a *fixed* set of output positions either in contiguous spatial blocks or shuffled: a pure relabeling that leaves the geometry, and therefore reach, byte-identical between the two (confirmed to machine precision at every separation). Across eight seeds and four separations (mean reach 71 → 57 → 23 → 2.6 input neighbours per output neuron), learning tracked reach monotonically and steeply — a 77-fold change from highest to lowest reach, Spearman ρ = 1.00 at fixed arrangement, pooled R² = 0.98 — while class arrangement had no significant effect at any matched reach (paired *p* = 0.09–0.28; Table 6). Reach is therefore not merely correlated with learning but the variable placement acts *through*; the spatial clustering of classes that nominally distinguishes "segregated" from "interleaved" is, on its own and with reach held fixed, inert.
 
@@ -387,6 +391,33 @@ To turn the mediation from correlational to causal, we manipulated reach and the
 | 15 | 2.6 | 73 ± 59 | 83 ± 66 | 0.28 |
 
 The arrangement comparisons are non-significant throughout, though a weak, non-significant trend favouring mixed at high reach (*p* ≈ 0.09–0.11) means we claim only that any arrangement effect is small relative to the 77-fold reach effect, not that it is exactly zero.
+
+### 4.8 Fabric sparsity: when the penalty saturates, and what protects against it
+
+Section 4.6 shows a real mapping tool incurring the penalty at this benchmark's geometry, where the core pitch happens to equal the plasticity radius. Since Section 4.7 identifies reach as the operative variable, the natural question is how the result moves when that coincidence is broken. We swept the fabric's core pitch from 0.5x to 3x the plasticity radius — the radius being a property of the substrate's plasticity mechanism and the pitch a property of the floorplan — holding everything else fixed. Placements are not regenerated per pitch: each strategy's placement is produced once by the same functions used in Sections 4.1 and 4.6, and each core's disc is then rigidly translated to the new pitch, which preserves within-core geometry exactly and is bit-identical to the original at ρ = 1 (both verified). Eight seeds per cell.
+
+**Table 7.** Learning (taught mass) versus fabric sparsity ρ = core pitch / plasticity radius. Mean ± s.d. over eight seeds, N=900. The segregated baseline is included as the floor.
+
+| ρ | interleaved | SpiNeMap — population | SpiNeMap — functional | segregated |
+|---|---|---|---|---|
+| 0.5 | 3029 ± 21 | 1595 ± 90 | 3017 ± 35 | 752 ± 11 |
+| 1.0 | 2958 ± 30 | 904 ± 69 | 2980 ± 19 | 733 ± 6 |
+| 1.25 | 2279 ± 23 | 753 ± 19 | 2982 ± 22 | 731 ± 5 |
+| 1.5 | 2035 ± 18 | 733 ± 3 | 2987 ± 15 | 730 ± 5 |
+| 2.0 | 2039 ± 8 | 730 ± 10 | 2974 ± 18 | 732 ± 5 |
+| 3.0 | 2039 ± 8 | 730 ± 10 | 2974 ± 18 | 732 ± 5 |
+
+Three results, one of which contradicts a prediction we registered before running.
+
+**The penalty saturates rather than switching on.** Population-graph SpiNeMap already carries a penalty at the densest fabric (1.90x below interleaved at ρ = 0.5) and degrades monotonically until, at ρ ≥ 1.5, it is statistically indistinguishable from the segregated baseline itself (733 ± 3 vs 730 ± 5). So sparsity does not create the penalty — the map-time graph does — but sparsity determines how complete it becomes. Beyond ρ ≈ 1.5 a communication-minimizing placement built on the pre-plasticity graph has lost the ability to form cross-type associations entirely, and no amount of further spreading changes that.
+
+**Declaring the associations protects at every fabric density.** Functional-graph SpiNeMap is flat across the whole sweep (3017 → 2974, a 1.4% change over a 6x change in pitch). More striking, beyond ρ = 1.25 it *exceeds* interleaved placement — 2974 vs 2039, a 1.46x advantage — because it deliberately co-locates the specific populations that must associate, whereas interleaving mixes all types uniformly and therefore spends core capacity on neurons that have no reason to be adjacent. On a sparse fabric, uniform interleaving is a blunt instrument; targeted co-location of correlated populations is strictly better. This is the paper's most directly actionable result for tool builders: the fix is not to abandon communication-aware mapping but to give it the association structure.
+
+**The interleaved control, and a prediction that failed.** We predicted interleaved placement would be flat in pitch, on the reasoning that its cross-type partners sit inside the same core disc (radius 1.5, well under the plasticity radius) and respacing cores cannot remove them. That is wrong: interleaved also draws partners from *neighbouring* cores at low ρ, and loses them, falling 1.49x from ρ = 0.5 to ρ = 1.5. What the sweep does deliver is a stronger control than the predicted flatness would have been. Interleaved learning is identical at ρ = 1.5, 2.0 and 3.0 (2035, 2039, 2039) across a 4x increase in mean squared wire distance, and its reach is likewise pinned at 3.00 across those points. The plasticity rule's rewiring score contains a distance discount, 1/(1 + 0.05d²), so a plausible alternative explanation for every result in this paper is that distance *per se* penalizes candidate pairs. That explanation predicts continued decline from ρ = 1.5 to 3.0. It does not occur, in any of the four placement families. Distance matters only through whether it puts a correlated partner inside the radius.
+
+**Refining the mediator (exploratory).** Section 4.7 measured reach as a mean *count* of correlated partners within the radius, on a placement family where every reasonable form of that measure co-varies. This sweep breaks the tie, and the count form does not survive it: pooled across all four placement families and six pitches, count explains R² = 0.266 of the variance in learning. The failure is systematic, not noisy — population-graph SpiNeMap at ρ = 0.5 has a *higher* mean count than interleaved (36.8 vs 29.6) while learning half as much, because type-pure cores concentrate the reachable pool onto boundary neurons and leave core interiors with nothing in reach. Substituting *coverage* — the fraction of correlated neurons with at least one partner within the radius — raises this to R² = 0.832 (Spearman ρ = 0.922), and five pairs of conditions with matched count (6.3–8.1) but different coverage all separate as coverage predicts: coverage 1.00 gives ≈2980 taught, coverage 0.61 gives 904. Adding count back on top of coverage buys +0.004 R², while coverage adds +0.172 over count alone. Pool size is not irrelevant, but its effect is strongly saturating: within interleaved placement, where coverage is pinned at 1.000 at every pitch, a 9.9x reduction in mean count costs only 1.49x in learning, against roughly 4x for losing coverage altogether.
+
+We therefore restate the mechanism of Section 4.7 more precisely: placement acts on learning primarily through *whether* correlated neurons have any partner the local rule can reach, and only secondarily, with diminishing returns, through how many. We flag the epistemic status honestly — only the count form was pre-registered, in Exp 40; coverage was formulated after seeing the discrepancy above and is therefore exploratory model selection rather than a confirmatory test. A clean confirmatory test requires a placement family constructed so that count and coverage make opposing predictions, which we have not yet run.
 
 ---
 
@@ -414,7 +445,15 @@ holding class arrangement fixed by pure relabeling) confirms reach is
 *causal* rather than merely correlated. This reframes the whole result
 mechanistically: placement matters exactly insofar as it sets how much
 of the correlated structure the local plasticity rule can physically
-reach.
+reach. Section 4.8 then sweeps the fabric's core pitch against the
+plasticity radius, which does three things: it shows the mapping-tool
+penalty saturating to the full segregated penalty beyond a pitch of
+about 1.5 radii, it shows that supplying the association structure
+protects at every density tested, and — by holding learning exactly
+constant across a 4x change in wire distance at fixed reach — it rules
+out distance itself, as opposed to reach, as the operative variable.
+It also refines how reach should be measured: coverage of the
+correlated population, not the mean size of the reachable pool.
 
 **Practical implication for hardware mapping.** A mapping tool
 optimizing purely for communication energy, applied to hardware with
@@ -430,9 +469,14 @@ lands at interleaved when the to-be-learned associations are declared
 to it. Since a plastic substrate exists precisely to learn
 associations unknown at map time, that information is normally
 missing, and the risk is therefore the default case rather than the
-exception. It is also checkable: the placement-only reach statistic of
-Section 4.7 is computable before deployment, so a plasticity-aware
-mapper could constrain against it directly.
+exception. It is also checkable and fixable: the placement-only reach
+statistic of Sections 4.7-4.8 is computable before deployment, so a
+plasticity-aware mapper could constrain against it directly — and
+Section 4.8 shows that a communication-minimizing mapper given the
+association structure not only avoids the penalty at every fabric
+density tested but outperforms uniform interleaving on sparse
+fabrics, since it co-locates the populations that must associate
+rather than mixing all types indiscriminately.
 
 ---
 
@@ -462,6 +506,17 @@ documented in Section 4.6. That episode is itself a limitation worth
 stating: these results rest on a single implementation, and one
 load-bearing component of it was wrong for a period without any
 result looking anomalous.
+
+**Post-hoc metric selection.** The coverage form of the reach
+metric adopted in Section 4.8 was chosen after observing that the
+pre-registered mean-count form failed on the corrected Section 4.6
+result. It fits the pooled data well (R^2 = 0.832 across four
+placement families and six fabric densities, against 0.266 for the
+count form), and the direction is supported by five independent
+matched-count comparisons, but it has not been tested on a placement
+family constructed in advance to discriminate the two. Until it is,
+the coverage form should be read as the best current description of
+the mediator rather than as a confirmed one.
 
 **Task and scale realism.** All synthetic results (Sections 4.1-4.4)
 use hand-designed stimulus patterns at N=900-5,000. Experiment 33's

@@ -180,6 +180,29 @@ correct until checked.
   and Limitations were rewritten; a stale Table 4 that disagreed with
   Section 4.1 on the same conditions (686/2926 vs 731.8/2952.9) was
   reconciled at the same time.
+- **Most recent completed result (Exp 42 + 42b)**: swept fabric core
+  pitch against the plasticity radius (rho = 0.5-3.0), holding the
+  radius fixed and rigidly respacing each core's disc (bit-identical to
+  the original at rho = 1). Three findings. (1) The mapping-tool penalty
+  SATURATES rather than switching on: population-graph SpiNeMap is
+  already 1.90x below interleaved at rho = 0.5 and becomes
+  indistinguishable from the segregated baseline at rho >= 1.5 (733 +/-
+  3 vs 730 +/- 5). (2) Functional-graph SpiNeMap is flat across the
+  whole sweep and BEATS interleaved by 1.46x at rho >= 1.25, because it
+  co-locates the populations that must associate instead of mixing all
+  types uniformly -- the most actionable result in the paper for tool
+  builders. (3) The distance-discount confound is dead: interleaved
+  learning is identical at rho = 1.5/2.0/3.0 (2035/2039/2039) across a
+  4x change in wire distance, at pinned reach. A registered prediction
+  FAILED -- interleaved is not flat in pitch (it falls 1.49x), because
+  it also draws partners from neighbouring cores at low rho; reported
+  as such in Section 4.8. Exp 42b then showed the pre-registered
+  mean-COUNT reach metric fails across placement families (R^2 = 0.266)
+  while COVERAGE -- the fraction of correlated neurons with any partner
+  in reach -- gives R^2 = 0.832; count adds only +0.004 on top of
+  coverage. Logged in Limitations as post-hoc metric selection; a
+  confirmatory test needs a placement family built in advance to make
+  count and coverage disagree (not yet run).
 - **Open, honestly-unresolved thread**: an "inverted-U" finding in
   Exp 35's timing-jitter sweep (moderate jitter beats both perfect
   synchrony and high jitter) survived three separate mechanism
