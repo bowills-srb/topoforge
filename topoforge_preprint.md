@@ -179,12 +179,33 @@ at scale without ever materializing a dense N x N state matrix.
 - **Random**: type assignment is independent of position (a control).
 
 We are explicit that our "segregated" condition is our own
-implementation of a wire-length-minimizing heuristic, not the
-measured output of a published mapping tool such as SpiNeMap or
-NEUTRAMS run on our task; we have not benchmarked against those
-tools' actual output, and this is discussed further in Section 6.
+implementation of a wire-length-minimizing heuristic rather than a
+published tool's output. Section 4.6 closes that gap directly by
+reimplementing SpiNeMap's published algorithm and running it through
+the same benchmark; we have not benchmarked against NEUTRAMS or other
+tools' actual output, and the scope of what Section 4.6 does and does
+not settle is discussed in Section 6.
 
 ### 3.4 Statistical methodology
+
+**Computational reproducibility.** The rewiring step selects which
+connections to replace by sorting a score array in which most entries
+are exactly zero, using NumPy's default (unstable) sort. Which of the
+tied-at-zero connections gets replaced therefore depends on sort
+implementation details, and those changed between NumPy 1.26.4 and
+2.5.1: on the benchmark of Section 4.1, seed 0, the two versions give
+2955 and 2979 for interleaved placement and 682 and 724 for
+segregated — a 6.2% difference on the segregated condition, and a
+headline ratio of 4.33x versus 4.03x. Forcing a stable sort makes the
+two versions agree exactly (2978 and 702, ratio 4.24x), confirming
+tie-breaking as the sole cause. We report this rather than quietly
+pinning it because it bounds how precisely any single magnitude in
+this paper should be read. Every contrast we report is computed
+within a single environment, so the comparisons are unaffected; but a
+reader reproducing an absolute number on a different NumPy build
+should expect agreement to a few percent, not to the digit. Directions
+and orderings are robust to this; third significant figures are not.
+
 
 Learning-quality differences between placement conditions are tested
 with Welch's two-sample t-test (unequal variances assumed), reporting

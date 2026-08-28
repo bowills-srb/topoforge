@@ -128,6 +128,43 @@ correct until checked.
    what might differ. This isolated harness-vs-physics bugs faster
    than any other technique used tonight.
 
+8. **A check only certifies the configuration it actually runs — and
+   `audit.py` certifies nothing about this code at all.** An audit
+   sweep (2026-08-27) mapped coverage against use and found the safety
+   net sat over the wrong code. `audit.py` imports nothing from the
+   project: it is a self-contained dense reimplementation, so it would
+   print GRANITE with the engine deleted. `audit_engine.py` gates
+   `engine.Life`, but NO preprint-backing experiment imports the engine
+   — every one of them depends on just `SparsePairState`, `SpatialGrid`
+   and its own inline physics loop. So the hours-long gate guarded code
+   no published number touches, while the load-bearing path had no gate.
+   Fixed by `src/audit_deployed.py` (~90s, run it). Same lesson as #7,
+   one level up: ask what the deployed path calls, then test that.
+
+9. **`FastLife` was never certified to match `LocalLife`, despite the
+   docs saying "exactly".** Its self-test compares one scalar
+   (taught_mass) on one seed under one rule, accepts any difference
+   below 50 as "CLOSE = vectorization preserved logic", and asserts
+   nothing. On a full edge-set comparison it differs by 3,078-7,077 of
+   10,000 edges; `rule='rpe'`, seed 1 gives a taught-mass difference of
+   65, which exceeds the test's own threshold and would print DIVERGED
+   — but that configuration is never run. No published result uses
+   `FastLife`; `topoforge-scale` plans to, so re-certify first.
+
+10. **Learning numbers are environment-sensitive; record the
+   interpreter.** `run_life` picks cold edges via `np.argsort` over a
+   score array that is mostly exactly zero, using the default UNSTABLE
+   sort, so tie order decides which connections are replaced. numpy
+   1.26.4 vs 2.5.1 on the PLB, seed 0: interleaved 2955 vs 2979,
+   segregated 682 vs 724 (6.2%), headline ratio 4.33x vs 4.03x. With
+   `kind='stable'` both versions agree exactly (2978 / 702, ratio
+   4.24x). This also explains a discrepancy previously mistaken for a
+   stale code state: the preprint's old Section 4.6 table (686/2926)
+   was simply run under numpy 1.26.4 while Section 4.1 (731.8/2952.9)
+   was run under 2.5.1. Disclosed in preprint Section 3.4. The
+   one-line fix (`kind='stable'`) is NOT yet applied because it shifts
+   every published number and needs a deliberate regeneration pass.
+
 ## Current state (as of this handoff)
 
 - **Provisional patent filed**: USPTO #64/134,008, filed 08/14/2026.
@@ -225,6 +262,18 @@ correct until checked.
   neighbourhood they are. NOT calibrated -- the same relative coverage
   drop costs 1.32x here and 3.27x in Exp 38's geometry, so it predicts
   ordering, not magnitude. Logged as such in Limitations.
+- **Most recent completed work (audit sweep, 2026-08-27)**: after the
+  Exp 38 partitioner bug, swept every audit and self-test asking one
+  question -- does this check exercise the configuration the deployed
+  path uses? Four findings, logged as gotchas #8-#10 above. Nothing
+  found invalidates a published result. `SpatialGrid.within` was
+  brute-force verified exact at the deployed `cell == radius` setting
+  (the zero-margin ring=1 case its self-test never ran) on every real
+  placement plus adversarial boundary points; `SparsePairState` is
+  exact to 1.67e-15 against a dense reference under the deployed call
+  pattern. New gate `src/audit_deployed.py` passes under both numpy
+  1.26.4 and 2.5.1 in ~60s. CLAUDE.md corrected where it asserted
+  things now known false.
 - **Open, honestly-unresolved thread**: an "inverted-U" finding in
   Exp 35's timing-jitter sweep (moderate jitter beats both perfect
   synchrony and high jitter) survived three separate mechanism
