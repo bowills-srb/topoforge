@@ -148,7 +148,7 @@ class Life:
 
     def rewire(self):
         self.C.prune_below(1e-6)
-        cold = np.argsort(self._edge_score())[:self.swap]
+        cold = np.argsort(self._edge_score(), kind="stable")[:self.swap]
 
         keys = set(self.C.store.keys())
         if self.rule in ('util', 'rpe'):

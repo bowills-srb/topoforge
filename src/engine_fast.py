@@ -12,7 +12,7 @@ class FastLife(LocalLife):
     def rewire(self):
         self.C.prune_below(1e-6)
         edge_score = self._edge_score()
-        cold = np.argsort(edge_score)[:self.swap]
+        cold = np.argsort(edge_score, kind="stable")[:self.swap]
 
         # gather candidate pairs from active state as arrays
         ci, cj, cv = self.C.get_arrays()
@@ -65,7 +65,7 @@ class FastLife(LocalLife):
         if len(ai) == 0:
             return
 
-        order = np.argsort(score)[::-1][:len(cold)]
+        order = np.argsort(score, kind="stable")[::-1][:len(cold)]
         chosen_i, chosen_j = ai[order], aj[order]
 
         n = min(len(cold), len(chosen_i))

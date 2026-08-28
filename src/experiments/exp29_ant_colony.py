@@ -123,7 +123,7 @@ def run_arm(coords, cids, seed, anomaly_type):
 
             C.prune_below(1e-6)
             sc = np.array([V.get(int(src[k]), int(dst[k])) for k in range(len(src))])
-            cold = np.argsort(sc)[:swap]
+            cold = np.argsort(sc, kind="stable")[:swap]
             ci, cj, _ = C.get_arrays()
             if len(ci) > 0:
                 keep2 = ci != cj; ci, cj = ci[keep2], cj[keep2]
@@ -137,7 +137,7 @@ def run_arm(coords, cids, seed, anomaly_type):
                     score = (vp + 0.01 * cp) / (1 + 0.05 * dd); pos = score > 0
                     ci, cj, score = ci[pos], cj[pos], score[pos]
                     if len(ci) > 0:
-                        order = np.argsort(score)[::-1][:len(cold)]
+                        order = np.argsort(score, kind="stable")[::-1][:len(cold)]
                         n2 = min(len(cold), len(order))
                         src[cold[:n2]] = ci[order[:n2]]; dst[cold[:n2]] = cj[order[:n2]]
                         out_t = [[] for _ in range(N)]; out_w = [[] for _ in range(N)]
