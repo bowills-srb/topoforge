@@ -8,8 +8,8 @@ where every reasonable form of the metric co-varies. Exp 38's corrected result
 breaks that tie and shows the count form is not sufficient:
 
     placement        taught    mean count   coverage
-    interleaved       2953        7.80        1.000
-    SpiNeMap-pop       904        6.34        0.608
+    interleaved       2950        7.80        1.000
+    SpiNeMap-pop       876        6.34        0.608
 
 Near-identical mean count, 3.3x different learning. What separates them is
 COVERAGE -- the fraction of correlated neurons with ANY reachable partner.

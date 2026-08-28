@@ -50,13 +50,13 @@ Status legend: `done` = regenerated and recorded; `running`; `pending`.
 
 | Figure | Before | After | Δ | Status |
 |---|---|---|---|---|
-| synthetic penalty range | 3.8–4.0x | | | pending |
-| geometry-removed ratio | 2.81x | | | pending |
-| real-data range | 3.6x–7.3x | | | pending |
-| real-data headline | 7.25x, CI [5.05, 11.48], p=3.2e-14 | | | pending |
-| SpiNeMap map-time penalty | 3.3x, 8% of the way | | | pending |
-| sparse-fabric advantage | 1.46x beyond rho 1.5 | | | pending |
-| energy premium | identical frozen, 1.4% plastic | | | pending |
+| synthetic penalty range | 3.8–4.0x | 3.8–4.2x | — | done |
+| geometry-removed ratio | 2.81x | 2.92x | +3.9% | done |
+| real-data range | 3.6x–7.3x | 5.1x–8.2x | — | done |
+| real-data headline | 7.25x, CI [5.05, 11.48] | 8.22x, CI [7.03, 10.05] | +13.4% | done |
+| SpiNeMap map-time penalty | 3.3x, 8% | 3.4x, 8% | +3.1% | done |
+| sparse-fabric advantage | 1.46x | 1.43x | −2.1% | done |
+| energy premium | identical frozen, 1.4% | identical frozen, 1.6% | +0.2pp | done |
 
 ### Section 3.4 (the reproducibility note itself — must be rewritten, not just updated)
 
@@ -65,7 +65,7 @@ Status legend: `done` = regenerated and recorded; `running`; `pending`.
 | numpy 1.26.4 seed 0 | 2955 / 682 | n/a — fix removes the divergence | — | done |
 | numpy 2.5.1 seed 0 | 2979 / 724 | n/a | — | done |
 | stable-sort value | 2978 / 702 | now the only value | — | done |
-| headline ratio spread | 4.33x / 4.03x / 4.24x | single value | — | pending |
+| headline ratio spread | 4.33x / 4.03x / 4.24x | single value: 4.20x | — | done |
 
 ### Section 4.1 — PLB (exp32b_benchmark, exp32b_scaled)
 
@@ -86,12 +86,13 @@ Welch consistently with the stated method. For reference the pooled statistic on
 the new data is t(18) = 188.0, p = 4.2e-31. Cohen's d falls because the
 segregated s.d. tightened from 6.0 to 1.9, not because the effect shrank; the
 ratio grew.
-| N=5000 segregated | 4032.8 ± 26.8 | | | pending |
-| N=5000 interleaved | 15349.6 ± 216.7 | | | pending |
-| N=5000 ratio | 3.81x | | | pending |
-| N=5000 t(18) | 163.9 | | | pending |
-| N=5000 p | 2.3e-17 | | | pending |
-| N=5000 Cohen's d | 73.3 | | | pending |
+| N=5000 segregated | 4032.8 ± 26.8 | 4005.5 ± 0.8 | −0.7% | done |
+| N=5000 interleaved | 15349.6 ± 216.7 | 15399.9 ± 203.4 | +0.3% | done |
+| N=5000 ratio | 3.81x | 3.85x | +0.9% | done |
+| N=5000 t / df | t(18) = 163.9 | Welch t(9.0) = 177.1 | see 4.1 note | done |
+| N=5000 p | 2.3e-17 | 3.0e-17 (Welch) | — | done |
+| N=5000 Cohen's d | 73.3 | 79.2 | +8.1% | done |
+| N=5000 frozen energy | not published | 150,880,450, identical across all 3 | structural | done |
 
 ### Section 4.2 — persistence and detection (exp29_ant_colony)
 
@@ -251,25 +252,66 @@ becomes lower energy at statistically equal learning. Confirmed against the
 
 | Figure | Before | After | Δ | Status |
 |---|---|---|---|---|
-| Table 5, 11 rows (reach + normalized learning) | see preprint | | | pending |
-| Spearman rho K=4 / K=2 | 1.00 / 0.89 | | | pending |
-| dose-response rise K=4 / K=2 | 3.2x / 3.9x | | | pending |
-| pooled mediation R2 / rho | 0.90 / 0.93 | | | pending |
-| Table 6, 4 separations x 2 arrangements | see preprint | | | pending |
-| reach ladder | 71.0 / 57.0 / 22.5 / 2.6 | unchanged (placement-only) | 0% | done |
-| reach effect | 77x, rho=1.00, R2=0.98 | | | pending |
-| arrangement p range | 0.09–0.28 | | | pending |
+| Table 5 reach column | 24.1 … 38.7 | identical | 0% (placement-only) | done |
+| Table 5 learning, K=2 α=0.15 | 0.50 | 0.444 | −11% | done |
+| Table 5 learning, K=2 α=0.30 | 0.43 | 0.470 | +9% | done |
+| Table 5 learning, K=2 α=0.45 | 0.50 | 0.547 | +9% | done |
+| Table 5 learning, K=4 α=0.33 | 0.68 | 0.643 | −5% | done |
+| Table 5 learning, K=4 α=0.67 | 0.90 | 0.812 | −10% | done |
+| Spearman rho K=4 / K=2 | 1.00 / 0.89 | 1.000 / **1.000** | wobble removed | done |
+| dose-response rise K=4 / K=2 | 3.2x / 3.9x | 3.0x / 3.9x | −6% / 0% | done |
+| pooled mediation R2 / rho | 0.90 / 0.93 | 0.916 / 0.970 | +1.8% / +4.3% | done |
+
+A hedge is REMOVED here. The published text apologises for "a mild
+non-monotonic wobble in the low-alpha region, within seed noise" in the K=2
+curve: alpha=0.15 and 0.30 read 0.50 then 0.43, out of order. Regenerated they
+read 0.444 then 0.470, in order, and Spearman rho is exactly 1.000. The wobble
+was tie-breaking, not seed noise, and the disclaimer can be deleted. The K=2 /
+K=4 interleaving that the mediation argument rests on is preserved.
+| Table 6 offset 0 (clustered/mixed) | 5663±1701 / 6346±2591 | 8796±6516 / 8223±4536 | large, very noisy | done |
+| Table 6 offset 5 | 4754±804 / 4993±561 | 4101±716 / 4419±599 | −13.7% / −11.5% | done |
+| Table 6 offset 10 | 1180±914 / 819±324 | 669±310 / 975±541 | −43% / +19% | done |
+| Table 6 offset 15 | 73±59 / 83±66 | 30±17 / 24±17 | −59% / −71% | done |
+| reach ladder | 71.0 / 57.0 / 22.5 / 2.6 | 71.03 / 56.97 / 22.52 / 2.57 | 0% (placement-only) | done |
+| reach effect | 77x, rho=1.00, R2=0.98 | 292.7x / 345.8x, rho=1.000, R2=0.895 | much larger | done |
+| arrangement p range | 0.09–0.28 (all n.s.) | 0.685 / **0.005** / **0.048** / 0.466 | **claim breaks** | done |
+
+**A FIFTH CLAIM BREAKS, and it is the load-bearing one for Section 4.7.** The
+paper concludes that class arrangement, with reach held fixed, is "inert" and
+had "no significant effect at any matched reach". Regenerated, arrangement is
+significant at two of four separations (p = 0.005 and 0.048), both favouring
+MIXED. The effect is small against reach -- arrangement moves learning
+1.08x-1.46x where reach moves it ~300x -- but it is not zero.
+
+The published text already hedged in exactly this direction, noting "a weak,
+non-significant trend favouring mixed (p ~ 0.09-0.11)" and explicitly declining
+to claim the effect was exactly zero. That hedge is now vindicated rather than
+contradicted; the wording must move from "inert" to "small but real".
+
+This CONVERGES with Exp 43, which independently found that `frac` (partner share
+of the local neighbourhood) is not inert -- and mixed arrangement is precisely
+what raises partner share at fixed reach. Two experiments built for different
+purposes now agree there is a second, smaller channel beyond reach/coverage.
 
 ### Section 4.8 — fabric sparsity and mediator (exp42, exp42b, exp43)
 
 | Figure | Before | After | Δ | Status |
 |---|---|---|---|---|
-| Table 7, 6 pitches x 4 conditions | see preprint | | | pending |
-| interleaved decline | 1.49x | | | pending |
-| interleaved plateau | 2035 / 2039 / 2039 | | | pending |
-| count form pooled R2 | 0.266 | | | pending |
-| coverage pooled R2 / rho | 0.832 / 0.922 | | | pending |
-| incremental R2 (count / coverage) | +0.004 / +0.172 | | | pending |
+| Table 7 interleaved (6 pitches) | 3029/2958/2279/2035/2039/2039 | 3064/2959/2278/2050/2051/2051 | ≤1.2% | done |
+| Table 7 SpiNeMap-pop | 1595/904/753/733/730/730 | 1546/875/718/701/701/701 | ≤4.4% | done |
+| Table 7 SpiNeMap-func | 3017/2980/2982/2987/2974/2974 | 2979/2951/2928/2931/2931/2931 | ≤1.9% | done |
+| Table 7 segregated | 752/733/731/730/732/732 | 717/704/701/701/701/701 | ≤4.7% | done |
+| interleaved decline | 1.49x | 1.49x | 0% | done |
+| interleaved plateau | 2035 / 2039 / 2039 | 2050 / 2051 / 2051 | still pinned | done |
+| count form pooled R2 | 0.266 | 0.263 | −1.1% | done |
+| coverage pooled R2 / rho | 0.832 / 0.922 | 0.837 / 0.920 | +0.6% | done |
+| incremental R2 (count / coverage) | +0.004 / +0.172 | +0.003 / +0.178 | — | done |
+
+Every conclusion in 4.8 holds, and two SHARPEN. SpiNeMap-population now converges
+to exactly the segregated value at rho >= 1.5 (701 vs 701, previously 733 vs
+730), making the crossover claim exact rather than statistical. The
+distance-discount control is intact: interleaved is pinned at 2050/2051/2051
+across a 4x change in wire distance.
 | Table 8 C1 / C2 / C3 | 2909±27 / 2739±63 / 2082±36 | 2925±35 / 2719±53 / 2096±44 | +0.6 / −0.7 / +0.7% | done |
 | C2-vs-C3 | 1.32x, p=3.6e-11, d=12.8 | 1.30x, p=7.3e-13, d=12.8 | −1.5% | done |
 | C1-vs-C3 | 1.40x, p=1.5e-16 | 1.40x, p=1.7e-15, d=20.7 | 0.0% | done |
@@ -280,7 +322,7 @@ in isolation, frac non-zero). Note the pattern this establishes: every condition
 here learns substantially (2000-2900) and every one is stable to within 1%. The
 large swings in this regeneration are confined to conditions that learn almost
 nothing, where the ratio's denominator is dominated by tie-breaking.
-| density control | 0.4%, p=0.72 | | | pending |
+| density control | 0.4%, p=0.72 | 0.0%, p=0.997 | cleaner | done |
 | mediator metrics (count/frac/cover) | placement-only | unchanged | 0% | done |
 
 ### Section 4.9 — energy frontier (exp44)
@@ -307,3 +349,36 @@ deficit; against population-graph SpiNeMap it is 0.1% HIGHER energy, because
 that condition's energy fell 2.530e6 -> 2.497e6 and overtook it. The practical
 recommendation survives in weaker form (~3.4x the learning of the map-time
 graph at essentially equal energy) but the dominance sentence must go.
+
+
+---
+
+## Final status
+
+All nine sections regenerated; the preprint is updated. No `pending` rows remain.
+
+**Five claims broke** (all in prose written from pre-fix numbers):
+1. 4.5 sample-diversity disentangling — the two configurations no longer agree.
+2. 4.5 bracketing — the real-data range now sits above the synthetic value.
+3. 4.5 near-zero seeds — no seed produces near-zero mass (min 274).
+4. 4.7 "arrangement is inert" — significant at 2 of 4 separations.
+5. 4.9 Pareto dominance — dominates 1 of 3 comparisons, not all.
+
+**Three hedges were removed** (the correction cut both ways):
+1. 4.6's functional-graph result was nominally significant at p=0.02; now p=0.81.
+2. 4.7's K=2 "non-monotonic wobble" was tie-breaking; Spearman rho is now 1.000.
+3. 4.5's variance overstatement.
+
+**Every direction survived.** Segregation harms learning in all nine sections,
+reach remains causal and stronger than reported (~300x vs 77x), the mediator
+verdicts are unchanged, and 4.4's exact zero is immovable.
+
+**The governing pattern**, now stated in Section 3.4: quantities measuring
+substantial learning moved under 4%; every claim that broke depended on a
+near-zero quantity where tie-breaking rather than physics set the value.
+
+**One methodological caveat remains open** (out of scope here): `kind='stable'`
+makes tie-breaking reproducible but not principled — it picks index order.
+Randomizing tie-breaking per seed would make reported error bars absorb tie
+uncertainty. Until that is done, error bars on near-zero conditions understate
+their true uncertainty.

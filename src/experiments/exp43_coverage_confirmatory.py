@@ -2,8 +2,8 @@
 
 Exp 42b found that the pre-registered mean-COUNT form of the reach metric
 (Exp 40, preprint Section 4.7) fails across placement families (pooled
-R^2 = 0.266), while COVERAGE -- the fraction of correlated neurons with at
-least one partner inside the plasticity radius -- gives R^2 = 0.832. But
+R^2 = 0.263), while COVERAGE -- the fraction of correlated neurons with at
+least one partner inside the plasticity radius -- gives R^2 = 0.837. But
 coverage was formulated AFTER seeing the data it explains, so that is
 exploratory model selection, not a test. This experiment is the confirmatory
 one: three placements built in advance so that the rival accounts make
@@ -360,7 +360,7 @@ def density_control():
         out[1.0].mean(), out[1.073].mean(), out[1.0].mean() / out[1.073].mean(), p))
     print("  -> a density change spanning the C1/C2 asymmetry moves learning")
     print("     {:.1%}, against the {:.1%} C1-vs-C2 gap. The frac effect is not"
-          .format(abs(out[1.0].mean() / out[1.073].mean() - 1), 2909 / 2739 - 1))
+          .format(abs(out[1.0].mean() / out[1.073].mean() - 1), 2925 / 2719 - 1))
     print("     a density artifact.")
 
 
