@@ -1,6 +1,14 @@
 """PLB v1.0 Scaled: N=5,000 on a 25x10 grid (250 cores, 20 neurons/core)
 3 placements x 10 seeds. The benchmark at realistic chip scale.
 Run: python src/exp32b_scaled.py
+
+METRIC CORRECTION (2026-08-29, PROJECT_HISTORY gotcha #11): raw "taught"
+mass is a raw edge count diluted by a non-local random-initialization
+baseline shared by every placement (see exp32b_benchmark.py's docstring --
+the N=900 benchmark this scales up). This script already records taught at
+the frozen checkpoint, so growth = plastic_taught - frozen_taught
+(plasticity-attributable) is now reported alongside raw taught as the
+corrected primary metric.
 """
 import numpy as np
 import time
@@ -218,7 +226,7 @@ if __name__ == "__main__":
     print("PLACEMENT-LEARNING BENCHMARK RESULTS (N={})".format(N))
     print("=" * 74)
 
-    print("\nTable 1: Learning Quality")
+    print("\nTable 1: Learning Quality (raw taught -- legacy, diluted by shared baseline)")
     print("{:>15} {:>14} {:>10}".format("placement", "taught", "vs vlsi"))
     print("-" * 42)
     baselines = {}
@@ -230,6 +238,26 @@ if __name__ == "__main__":
         if sn != "vlsi" and "vlsi" in baselines:
             vs = "{:.1f}x".format(m / max(baselines["vlsi"], 1))
         print("{:>15} {:>7.0f}+/-{:<4.0f} {:>10}".format(sn, m, s, vs))
+
+    print("\nTable 1b: Plasticity-Attributable Learning (growth = plastic - frozen taught)")
+    print("CORRECTED primary result -- see module docstring.")
+    print("{:>15} {:>16} {:>10}".format("placement", "growth", "sign"))
+    print("-" * 44)
+    growth_baselines = {}
+    growth_vals = {}
+    for sn, _ in strategies:
+        g = np.array([r["plastic"]["taught"] - r["frozen"]["taught"] for r in all_results[sn]], float)
+        growth_vals[sn] = g
+        growth_baselines[sn] = g.mean()
+        sign = "NET GAIN" if g.mean() > 0 else "NET LOSS"
+        print("{:>15} {:>8.0f}+/-{:<6.0f} {:>10}".format(sn, g.mean(), g.std(), sign))
+    if "topoforge" in growth_vals and "vlsi" in growth_vals:
+        try:
+            from scipy import stats
+            t, p = stats.ttest_ind(growth_vals["topoforge"], growth_vals["vlsi"], equal_var=False)
+            print("\n  interleaved vs segregated growth: Welch t={:.2f}, p={:.2e}".format(t, p))
+        except ImportError:
+            print("\n  (scipy unavailable -- skipping Welch test; means above still valid)")
 
     print("\nTable 2: Wire Energy (frozen phase)")
     print("{:>15} {:>14}".format("placement", "energy"))
@@ -267,4 +295,20 @@ if __name__ == "__main__":
     print("  If ratio GROWS with N: the effect scales with chip size.")
     print("  If ratio HOLDS: robust across scales.")
     print("  If ratio SHRINKS: toy-scale artifact (honest negative).")
+
+    print("\n  CORRECTED (plasticity-attributable, N={}):".format(N))
+    tf_g = growth_baselines.get("topoforge")
+    vl_g = growth_baselines.get("vlsi")
+    if tf_g is not None and vl_g is not None:
+        print("  interleaved growth: {:+.0f}   segregated growth: {:+.0f}".format(tf_g, vl_g))
+        if vl_g < 0 < tf_g:
+            print("  -> SIGN FLIP at N={}, matching the N=900 result: segregated doesn't".format(N))
+            print("     learn weakly, it actively erodes non-mechanistic pre-wiring; only")
+            print("     interleaved builds new cross-type structure.")
+        elif vl_g > 0 and tf_g > 0:
+            print("  -> Both net-positive at this scale; ratio = {:.2f}x -- the sign flip".format(tf_g / vl_g))
+            print("     seen at N=900 does NOT replicate here as a sign flip, only as a ratio.")
+        else:
+            print("  -> Unexpected pattern (both non-positive or interleaved below segregated) --")
+            print("     investigate before trusting either N=900 or N={} as representative.".format(N))
     print("\n  Replicate: github.com/bowills-srb/topoforge")

@@ -54,6 +54,13 @@ Physics is imported VERBATIM from exp32b_benchmark (run_life, N, PATTERNS);
 only the placement differs. Run with the checked-in venv (needs scipy):
   venv/Scripts/python.exe src/experiments/exp43_coverage_confirmatory.py --audit
   venv/Scripts/python.exe src/experiments/exp43_coverage_confirmatory.py
+
+METRIC CORRECTION (2026-08-29, PROJECT_HISTORY gotcha #11): "taught" is
+diluted by a shared non-local random-initialization baseline (see
+exp32b_benchmark.py docstring). This script now also tracks and verdicts on
+growth = plastic_taught - frozen_taught (plasticity-attributable signal).
+Raw taught is kept for continuity; growth is the corrected primary target.
+If the two metrics' verdicts disagree, that is reported explicitly.
 """
 import numpy as np
 import time
@@ -253,27 +260,30 @@ def run():
     for name in ORDER:
         coords, cids = make_condition(name)
         m = mediators(coords, cids)
-        taught = []
+        taught, growth = [], []
         t0 = time.time()
         for s in SEEDS:
-            taught.append(run_life(coords, cids, s)["plastic"]["taught"])
-        results[name] = (np.array(taught, float), m)
+            r = run_life(coords, cids, s)
+            taught.append(r["plastic"]["taught"])
+            growth.append(r["plastic"]["taught"] - r["frozen"]["taught"])
+        results[name] = (np.array(taught, float), np.array(growth, float), m)
         print("  {:<11} count={:.2f} frac={:.3f} cover={:.3f}  taught={:.0f} "
-              "+/- {:.0f}  ({:.0f}s)".format(
+              "+/- {:.0f}  growth={:+.0f} +/- {:.0f}  ({:.0f}s)".format(
                   name, m["count"], m["frac"], m["cover"],
                   results[name][0].mean(), results[name][0].std(ddof=1),
+                  results[name][1].mean(), results[name][1].std(ddof=1),
                   time.time() - t0))
         sys.stdout.flush()
     return results
 
 
-def report(results):
-    from scipy import stats
-    c1, c2, c3 = (results[n][0] for n in ORDER)
+def analyze_and_verdict(results, idx, label, stats):
+    """idx: 0 = raw taught, 1 = growth (plasticity-attributable)."""
+    c1, c2, c3 = (results[n][idx] for n in ORDER)
 
-    print("\n" + "=" * 78)
-    print("PAIRWISE CONTRASTS (Welch, 8 seeds)")
-    print("=" * 78)
+    print("\n" + "-" * 78)
+    print("[{}] PAIRWISE CONTRASTS (Welch, {} seeds)".format(label, len(SEEDS)))
+    print("-" * 78)
     def contrast(a, b, na, nb):
         t, p = stats.ttest_ind(a, b, equal_var=False)
         d = abs(a.mean() - b.mean()) / np.sqrt((a.var(ddof=1) + b.var(ddof=1)) / 2)
@@ -285,9 +295,7 @@ def report(results):
     p23 = contrast(c2, c3, ORDER[1], ORDER[2])
     p13 = contrast(c1, c3, ORDER[0], ORDER[2])
 
-    print("\n" + "=" * 78)
-    print("VERDICT ON THE THREE ACCOUNTS")
-    print("=" * 78)
+    print("\n[{}] VERDICT ON THE THREE ACCOUNTS".format(label))
     c3_below = (p13 < 0.05 and c3.mean() < c1.mean()) and \
                (p23 < 0.05 and c3.mean() < c2.mean())
     c1_eq_c2 = p12 >= 0.05
@@ -297,7 +305,7 @@ def report(results):
         "REFUTED -- C3 is below both, despite its higher count"
         if c3_below else "not refuted"))
     print("  H_frac  (C1 >> C2 ~ C3)   : {}".format(
-        "REFUTED -- C1 and C2 are indistinguishable at 4.3x different frac"
+        "REFUTED -- C1 and C2 are indistinguishable"
         if c1_eq_c2 else
         ("SUPPORTED -- C1 exceeds C2 at matched count and coverage"
          if c1_above_c2 else "ambiguous")))
@@ -305,24 +313,49 @@ def report(results):
         "SUPPORTED" if (c3_below and c1_eq_c2) else
         ("partially supported" if c3_below else "NOT SUPPORTED")))
 
-    if c3_below and c1_eq_c2:
-        print("\n  Coverage is confirmed as the mediator on a placement family")
-        print("  built in advance to discriminate it. Section 4.8's refinement")
-        print("  can be stated as confirmatory rather than exploratory.")
-    elif not c3_below:
-        print("\n  Coverage is NOT confirmed. The Section 4.8 refinement must be")
-        print("  withdrawn or restated, and the count form reinstated.")
-    else:
-        print("\n  Mixed: coverage beats count, but frac is not cleanly separated")
-        print("  from it. Report both as viable; do not claim coverage alone.")
-
-    print("\n  measured mediators vs learning:")
+    print("\n  [{}] measured mediators vs learning:".format(label))
     print("  {:<11} {:>8} {:>8} {:>8} {:>10}".format(
-        "condition", "count", "frac", "cover", "taught"))
+        "condition", "count", "frac", "cover", label))
     for n in ORDER:
-        v, m = results[n]
+        vals = results[n]
+        v, m = vals[idx], vals[2]
         print("  {:<11} {:>8.2f} {:>8.3f} {:>8.3f} {:>10.0f}".format(
             n, m["count"], m["frac"], m["cover"], v.mean()))
+    return c3_below, c1_eq_c2
+
+
+def report(results):
+    from scipy import stats
+
+    print("\n" + "#" * 78)
+    print("# LEGACY METRIC: raw taught mass (diluted by shared non-local init")
+    print("# baseline -- see exp32b_benchmark.py docstring, PROJECT_HISTORY gotcha #11)")
+    print("#" * 78)
+    c3_below_t, c1_eq_c2_t = analyze_and_verdict(results, 0, "taught", stats)
+
+    print("\n" + "#" * 78)
+    print("# CORRECTED METRIC: growth = plastic_taught - frozen_taught")
+    print("#" * 78)
+    c3_below_g, c1_eq_c2_g = analyze_and_verdict(results, 1, "growth", stats)
+
+    print("\n" + "=" * 78)
+    print("OVERALL")
+    print("=" * 78)
+    if c3_below_g and c1_eq_c2_g:
+        print("  Coverage is confirmed as the mediator on the corrected (growth) metric,")
+        print("  a placement family built in advance to discriminate it.")
+    elif not c3_below_g:
+        print("  Coverage is NOT confirmed on the corrected metric. The standing claim")
+        print("  must be withdrawn or restated.")
+    else:
+        print("  Mixed on the corrected metric: coverage beats count, but frac is not")
+        print("  cleanly separated from it.")
+    if (c3_below_t, c1_eq_c2_t) != (c3_below_g, c1_eq_c2_g):
+        print("  NOTE: the legacy (taught) and corrected (growth) verdicts DIFFER --")
+        print("  the metric correction changed this experiment's conclusion, not just")
+        print("  its magnitude. Investigate before trusting either in isolation.")
+    else:
+        print("  The legacy and corrected metrics agree on the qualitative verdict.")
 
 
 def density_control():
@@ -347,21 +380,25 @@ def density_control():
             np.fill_diagonal(d, np.inf)
             nn.append(d.min(1).mean())
         m_ = mediators(coords, cids)
-        v = np.array([run_life(coords, cids, s)["plastic"]["taught"]
-                      for s in SEEDS], float)
-        out[k] = v
+        life = [run_life(coords, cids, s) for s in SEEDS]
+        v = np.array([r["plastic"]["taught"] for r in life], float)
+        g = np.array([r["plastic"]["taught"] - r["frozen"]["taught"] for r in life], float)
+        out[k] = (v, g)
         print("  radius x{:.3f}  NN={:.3f}  max intra-blob={:.2f} (< {:.1f})  "
-              "count={:.2f} frac={:.3f} cover={:.3f}  taught={:.0f} +/- {:.0f}".format(
+              "count={:.2f} frac={:.3f} cover={:.3f}  taught={:.0f} +/- {:.0f}"
+              "  growth={:+.0f} +/- {:.0f}".format(
                   k, float(np.mean(nn)), mx, PLASTICITY_RADIUS,
-                  m_["count"], m_["frac"], m_["cover"], v.mean(), v.std(ddof=1)))
+                  m_["count"], m_["frac"], m_["cover"], v.mean(), v.std(ddof=1),
+                  g.mean(), g.std(ddof=1)))
     RADIUS_SCALE = 1.0
-    t, p = stats.ttest_ind(out[1.0], out[1.073], equal_var=False)
-    print("\n  density contrast: {:.0f} vs {:.0f} = {:.3f}x, p={:.3g}".format(
-        out[1.0].mean(), out[1.073].mean(), out[1.0].mean() / out[1.073].mean(), p))
-    print("  -> a density change spanning the C1/C2 asymmetry moves learning")
-    print("     {:.1%}, against the {:.1%} C1-vs-C2 gap. The frac effect is not"
-          .format(abs(out[1.0].mean() / out[1.073].mean() - 1), 2925 / 2719 - 1))
-    print("     a density artifact.")
+    t, p = stats.ttest_ind(out[1.0][0], out[1.073][0], equal_var=False)
+    print("\n  [taught] density contrast: {:.0f} vs {:.0f} = {:.3f}x, p={:.3g}".format(
+        out[1.0][0].mean(), out[1.073][0].mean(), out[1.0][0].mean() / out[1.073][0].mean(), p))
+    tg, pg = stats.ttest_ind(out[1.0][1], out[1.073][1], equal_var=False)
+    print("  [growth] density contrast: {:+.0f} vs {:+.0f}, Welch p={:.3g}".format(
+        out[1.0][1].mean(), out[1.073][1].mean(), pg))
+    print("  -> if growth's p-value is likewise non-significant, the frac effect is")
+    print("     not a density artifact under the corrected metric either.")
 
 
 if __name__ == "__main__":

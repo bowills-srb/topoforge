@@ -45,6 +45,13 @@ Run:
   python src/experiments/exp42_fabric_sparsity_crossover.py --audit   # ~10s
   python src/experiments/exp42_fabric_sparsity_crossover.py --smoke   # ~4min
   python src/experiments/exp42_fabric_sparsity_crossover.py           # full
+
+METRIC CORRECTION (2026-08-29, PROJECT_HISTORY gotcha #11): "taught" is a
+raw edge count inflated by a non-local random-initialization baseline
+shared by every placement/pitch (see exp32b_benchmark.py's docstring).
+This script now also tracks growth = plastic_taught - frozen_taught (the
+plasticity-attributable signal) and reports P1/P2/P3 on BOTH metrics --
+taught (legacy, kept for continuity) and growth (corrected, primary).
 """
 import numpy as np
 import time
@@ -217,17 +224,19 @@ def run(seeds, pitches):
             coords, cids = placement_at(strat, pitch)
             reach_of[(strat, pitch)] = plb_reach(coords, cids)
             energy_of[(strat, pitch)] = wire_energy_proxy(coords, cids)
-            taught, relearn = [], []
+            taught, relearn, growth = [], [], []
             t0 = time.time()
             for s in seeds:
                 r = run_life(coords, cids, s)
                 taught.append(r["plastic"]["taught"])
                 relearn.append(r["reversal"]["new_14"])
-            rows[(strat, pitch)] = (np.array(taught, float), np.array(relearn, float))
+                growth.append(r["plastic"]["taught"] - r["frozen"]["taught"])
+            rows[(strat, pitch)] = (np.array(taught, float), np.array(relearn, float), np.array(growth, float))
             print("    rho={:.1f} (pitch {:>4.1f})  reach={:>6.2f}  taught={:>7.0f} +/- {:>6.0f}"
-                  "  relearn={:>6.0f}  ({:.0f}s)".format(
+                  "  growth={:>+7.0f} +/- {:>6.0f}  relearn={:>6.0f}  ({:.0f}s)".format(
                       pitch / PLASTICITY_RADIUS, pitch, reach_of[(strat, pitch)],
                       rows[(strat, pitch)][0].mean(), rows[(strat, pitch)][0].std(ddof=1),
+                      rows[(strat, pitch)][2].mean(), rows[(strat, pitch)][2].std(ddof=1),
                       rows[(strat, pitch)][1].mean(), time.time() - t0))
             sys.stdout.flush()
     return rows, reach_of, energy_of
@@ -238,16 +247,87 @@ def dump_json(rows, reach_of, energy_of, pitches, path="exp42_results.json"):
     should never be lost to an import error or a stats bug in the report."""
     import json
     out = []
-    for (strat, pitch), (taught, relearn) in rows.items():
+    for (strat, pitch), (taught, relearn, growth) in rows.items():
         out.append({"strategy": strat, "pitch": pitch,
                     "rho": pitch / PLASTICITY_RADIUS,
                     "reach": reach_of[(strat, pitch)],
                     "wire_d2": energy_of[(strat, pitch)],
-                    "taught": taught.tolist(), "relearn": relearn.tolist()})
+                    "taught": taught.tolist(), "relearn": relearn.tolist(),
+                    "growth": growth.tolist()})
     with open(path, "w", encoding="utf-8") as f:
         json.dump(out, f, indent=1)
     print("")
     print("  raw results written to {}".format(path))
+
+
+def analyze_metric(rows, reach_of, energy_of, pitches, stats, idx, metric_label):
+    """P1/P2/P3 + table for one metric (idx into the rows tuple: 0=taught, 2=growth)."""
+    print("\n" + "=" * 74)
+    print("TABLE -- {} vs fabric sparsity".format(metric_label))
+    print("=" * 74)
+    print("  {:>5} {:>7}".format("rho", "pitch"), end="")
+    for strat, _ in STRATEGIES:
+        print(" {:>22}".format(strat), end="")
+    print()
+    for pitch in pitches:
+        print("  {:>5.1f} {:>7.1f}".format(pitch / PLASTICITY_RADIUS, pitch), end="")
+        for strat, _ in STRATEGIES:
+            m, s = rows[(strat, pitch)][idx].mean(), rows[(strat, pitch)][idx].std(ddof=1)
+            print(" {:>13.0f} +/-{:>5.0f}".format(m, s), end="")
+        print()
+
+    print("\n" + "-" * 74)
+    print("P1 [{}] -- is INTERLEAVED flat in pitch? (the distance-discount control)".format(metric_label))
+    print("-" * 74)
+    inter = np.array([rows[("topoforge", p)][idx].mean() for p in pitches])
+    rho_i, p_i = stats.spearmanr(list(pitches), inter)
+    print("  interleaved across rho {:.1f}->{:.1f}: {:.0f} -> {:.0f}, "
+          "Spearman rho={:.2f} p={:.3f}".format(
+              pitches[0] / PLASTICITY_RADIUS, pitches[-1] / PLASTICITY_RADIUS,
+              inter[0], inter[-1], rho_i, p_i))
+    t, p = stats.ttest_ind(rows[("topoforge", pitches[0])][idx],
+                           rows[("topoforge", pitches[-1])][idx], equal_var=False)
+    print("  extremes Welch t-test: p={:.4f}  -> interleaved is {}".format(
+        p, "NOT flat (confound live)" if p < 0.05 else "flat (confound controlled)"))
+
+    print("\n" + "-" * 74)
+    print("P2 [{}] -- does SPINEMAP cross over? (vs interleaved at each rho)".format(metric_label))
+    print("-" * 74)
+    for strat, _ in STRATEGIES:
+        if strat == "topoforge":
+            continue
+        print("\n  {}".format(strat))
+        print("    {:>5} {:>10} {:>14} {:>12} {:>12}".format(
+            "rho", "reach", "vs interleaved", "Welch p", "verdict"))
+        crossover = None
+        for pitch in pitches:
+            a = rows[("topoforge", pitch)][idx]
+            b = rows[(strat, pitch)][idx]
+            t, p = stats.ttest_ind(a, b, equal_var=False)
+            hit = (p < 0.05 and b.mean() < a.mean())
+            if hit and crossover is None:
+                crossover = pitch / PLASTICITY_RADIUS
+            print("    {:>5.1f} {:>10.2f} {:>12.0f} vs {:>7.0f} {:>12.4f} {:>12}".format(
+                pitch / PLASTICITY_RADIUS, reach_of[(strat, pitch)], b.mean(), a.mean(), p,
+                "PENALTY" if hit else "no penalty"))
+        print("    crossover: {}".format(
+            "rho >= {:.1f}".format(crossover) if crossover
+            else "none within the swept range"))
+
+    print("\n" + "-" * 74)
+    print("P3 [{}] -- is the degradation mediated by REACH? (pooled over strategy x pitch)".format(metric_label))
+    print("-" * 74)
+    xs, ys, labels = [], [], []
+    for strat, _ in STRATEGIES:
+        for pitch in pitches:
+            xs.append(reach_of[(strat, pitch)])
+            ys.append(rows[(strat, pitch)][idx].mean())
+            labels.append((strat, pitch))
+    xs, ys = np.array(xs), np.array(ys)
+    pr, pp = stats.pearsonr(xs, ys)
+    sr, sp = stats.spearmanr(xs, ys)
+    print("  n={} points  Pearson R^2={:.3f} (p={:.2e})  Spearman rho={:.3f} (p={:.2e})".format(
+        len(xs), pr ** 2, pp, sr, sp))
 
 
 def report(rows, reach_of, energy_of, pitches):
@@ -260,79 +340,18 @@ def report(rows, reach_of, energy_of, pitches):
         print("    venv/Scripts/python.exe src/experiments/exp42b_mediator_forms.py <output.txt>")
         return
 
-    print("\n" + "=" * 74)
-    print("TABLE -- learning (taught mass) vs fabric sparsity")
-    print("=" * 74)
-    print("  {:>5} {:>7}".format("rho", "pitch"), end="")
-    for strat, _ in STRATEGIES:
-        print(" {:>22}".format(strat), end="")
-    print()
-    for pitch in pitches:
-        print("  {:>5.1f} {:>7.1f}".format(pitch / PLASTICITY_RADIUS, pitch), end="")
-        for strat, _ in STRATEGIES:
-            m, s = rows[(strat, pitch)][0].mean(), rows[(strat, pitch)][0].std(ddof=1)
-            print(" {:>13.0f} +/-{:>5.0f}".format(m, s), end="")
-        print()
+    print("\n" + "#" * 74)
+    print("# LEGACY METRIC: raw taught mass (diluted by shared non-local init baseline --")
+    print("# see exp32b_benchmark.py docstring, PROJECT_HISTORY gotcha #11). Kept for")
+    print("# continuity; growth (below) is the corrected primary metric.")
+    print("#" * 74)
+    analyze_metric(rows, reach_of, energy_of, pitches, stats, 0, "raw taught mass")
 
-    print("\n" + "=" * 74)
-    print("P1 -- is INTERLEAVED flat in pitch? (the distance-discount control)")
-    print("=" * 74)
-    inter = np.array([rows[("topoforge", p)][0].mean() for p in pitches])
-    rho_i, p_i = stats.spearmanr(list(pitches), inter)
-    print("  interleaved across rho {:.1f}->{:.1f}: {:.0f} -> {:.0f} ({:.2f}x), "
-          "Spearman rho={:.2f} p={:.3f}".format(
-              pitches[0] / PLASTICITY_RADIUS, pitches[-1] / PLASTICITY_RADIUS,
-              inter[0], inter[-1], inter[-1] / max(inter[0], 1e-9), rho_i, p_i))
-    t, p = stats.ttest_ind(rows[("topoforge", pitches[0])][0],
-                           rows[("topoforge", pitches[-1])][0], equal_var=False)
-    print("  extremes Welch t-test: p={:.4f}  -> interleaved is {}".format(
-        p, "NOT flat (confound live)" if p < 0.05 else "flat (confound controlled)"))
-
-    print("\n" + "=" * 74)
-    print("P2 -- does SPINEMAP cross over? (vs interleaved at each rho)")
-    print("=" * 74)
-    for strat, _ in STRATEGIES:
-        if strat == "topoforge":
-            continue
-        print("\n  {}".format(strat))
-        print("    {:>5} {:>10} {:>14} {:>12} {:>12}".format(
-            "rho", "reach", "vs interleaved", "Welch p", "verdict"))
-        crossover = None
-        for pitch in pitches:
-            a = rows[("topoforge", pitch)][0]
-            b = rows[(strat, pitch)][0]
-            t, p = stats.ttest_ind(a, b, equal_var=False)
-            ratio = a.mean() / max(b.mean(), 1e-9)
-            hit = (p < 0.05 and b.mean() < a.mean())
-            if hit and crossover is None:
-                crossover = pitch / PLASTICITY_RADIUS
-            print("    {:>5.1f} {:>10.2f} {:>13.2f}x {:>12.4f} {:>12}".format(
-                pitch / PLASTICITY_RADIUS, reach_of[(strat, pitch)], ratio, p,
-                "PENALTY" if hit else "no penalty"))
-        print("    crossover: {}".format(
-            "rho >= {:.1f}".format(crossover) if crossover
-            else "none within the swept range"))
-
-    print("\n" + "=" * 74)
-    print("P3 -- is the degradation mediated by REACH? (pooled over strategy x pitch)")
-    print("=" * 74)
-    xs, ys, labels = [], [], []
-    for strat, _ in STRATEGIES:
-        for pitch in pitches:
-            xs.append(reach_of[(strat, pitch)])
-            ys.append(rows[(strat, pitch)][0].mean())
-            labels.append((strat, pitch))
-    xs, ys = np.array(xs), np.array(ys)
-    pr, pp = stats.pearsonr(xs, ys)
-    sr, sp = stats.spearmanr(xs, ys)
-    print("  n={} points  Pearson R^2={:.3f} (p={:.2e})  Spearman rho={:.3f} (p={:.2e})".format(
-        len(xs), pr ** 2, pp, sr, sp))
-    print("\n  {:>24} {:>6} {:>10} {:>12} {:>12}".format(
-        "strategy", "rho", "reach", "wire d^2", "taught"))
-    for k in np.argsort(xs):
-        strat, pitch = labels[k]
-        print("  {:>24} {:>6.1f} {:>10.2f} {:>12.0f} {:>12.0f}".format(
-            strat, pitch / PLASTICITY_RADIUS, xs[k], energy_of[(strat, pitch)], ys[k]))
+    print("\n" + "#" * 74)
+    print("# CORRECTED METRIC: growth = plastic_taught - frozen_taught")
+    print("# (plasticity-attributable signal, isolated from the shared baseline)")
+    print("#" * 74)
+    analyze_metric(rows, reach_of, energy_of, pitches, stats, 2, "growth (plasticity-attributable)")
 
     print("\n" + "=" * 74)
     print("If interleaved is flat while SpiNeMap falls with reach, then the")

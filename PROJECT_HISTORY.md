@@ -165,6 +165,71 @@ correct until checked.
    one-line fix (`kind='stable'`) is NOT yet applied because it shifts
    every published number and needs a deliberate regeneration pass.
 
+11. **A "learning" metric can be diluted by a non-mechanistic baseline
+   even when the underlying mechanism is real.** `exp32b_benchmark.py`'s
+   `run_life` measures "taught mass" as a raw count of edges by
+   cluster-type pair, but its INITIAL edge set is drawn uniformly at
+   random over all N neurons with zero locality constraint -- identical
+   in expectation regardless of placement. Both conditions' raw scores
+   therefore share a large non-mechanistic baseline (~1430 at N=900,
+   confirmed identical across seeds since it depends only on a fixed
+   rng). Worse, for the "vlsi" (segregated) condition the raw geometric
+   adjacency between the specifically-measured type pair is EXACTLY
+   ZERO (verified against the deployed SpatialGrid radius) -- the
+   mechanism's own prediction is a floor of zero learned structure, not
+   "4x less", and the nonzero raw number was leftover baseline, not
+   learning. Isolating growth = plastic_taught - frozen_taught (using a
+   checkpoint the benchmark already recorded, no physics change needed)
+   shows the true picture is a SIGN FLIP: interleaved gains +1462 +/- 36
+   units during the plastic phase; segregated LOSES -727 +/- 2 (Welch
+   p=1.9e-17) -- it doesn't learn weakly, it actively erodes
+   non-mechanistic pre-wiring toward same-type structure because it has
+   zero local candidates to grow instead. `exp38_spinemap_baseline.py`
+   imports the same `run_life` and inherited the same issue: SpiNeMap on
+   the population (map-time) graph, previously reported as "3.37x below
+   interleaved, 7.7% of the way toward it" on raw mass, is on the
+   corrected growth metric NET-NEGATIVE (-554 +/- 47, same sign as
+   segregated, p=1.6e-06 vs segregated) rather than partway toward
+   interleaved's gain -- this makes the SpiNeMap finding STRONGER, not
+   weaker, once isolated. Both experiments were patched (Table 1b /
+   growth table added, raw tables kept for continuity) and re-run at
+   full seed count 2026-08-29; preprint Sections 4.1 and 4.6, the
+   abstract, and Limitations were updated to report the corrected
+   number as primary. Found via a deliberate adversarial "try to
+   disprove the headline result" pass, not a scheduled audit --
+   consider running one periodically. **CLOSED (2026-08-29, same day)**:
+   `exp42` (fabric-sparsity sweep), `exp42b` (mediator-form comparison),
+   `exp43` (coverage-mediator confirmatory test), `exp44`
+   (energy-learnability frontier), and the N=5,000-scale PLB
+   (`exp32b_scaled.py`) were all patched to add the growth metric
+   alongside raw taught and re-run at full scale. Verdict: nothing
+   reversed. exp43's H_count/H_frac/H_cover verdicts are identical under
+   both metrics, with LARGER corrected ratios (2.13x vs 1.40x,
+   spread15-vs-clumped30). exp42b's mediator-form ranking is unchanged
+   (coverage/wfrac R^2 ~0.83-0.85 vs count's ~0.27, both metrics). exp42's
+   fabric-sparsity crossover is intact, and the corrected metric actually
+   REMOVED a false-positive: a marginal penalty the association-aware
+   mapper appeared to show at the tightest pitch on raw taught (p=0.0002)
+   is not significant on growth (p=0.12) -- the mapper is more robust
+   than the raw-metric report suggested. exp44's energy-per-learning
+   comparisons sharpen into sign flips against segregated and the
+   population-graph mapper (energy is unaffected -- it was never
+   taught-metric-dependent). The N=5,000 PLB replicates the sign flip at
+   larger effect size (interleaved +7362 vs segregated -4014, p=3.0e-17).
+   One implementation bug was found and fixed mid-task: the growth-value
+   regex in exp42b's output parser didn't accept the literal `+` sign
+   printed on positive values, silently turning every positive growth
+   condition into NaN on the first pass -- caught by inspecting the
+   output rather than trusting a clean exit code, fixed, re-run. All
+   corrected numbers are folded into preprint Sections 4.1, 4.6-4.9 and
+   Limitations. `exp37b`/`exp37c` (real-data) were separately CONFIRMED
+   CLEAN (not needing this correction): their "bridge mass" metric only
+   accrues value through
+   spatially-gated eligibility, so it cannot be inflated by non-local
+   random initial wiring, and their segregated condition has substantial
+   nonzero geometric adjacency by design (1198 vs interleaved's 2268),
+   not a zero floor.
+
 ## Current state (as of this handoff)
 
 - **Provisional patent filed**: USPTO #64/134,008, filed 08/14/2026.
@@ -310,6 +375,101 @@ correct until checked.
   discount makes it pursue a communication objective on its own.
   Preprint gains Section 4.9; abstract and Discussion updated. Run
   under numpy 1.26.4 (venv).
+- **Most recent completed work (adversarial "disprove it" pass,
+  2026-08-29)**: deliberately tried to falsify the headline result
+  rather than extend it. The crude "it's just geometry" attack failed
+  (predicted a floor of exactly zero for segregated; measured was
+  nonzero), but chasing that gap found gotcha #11: raw "taught mass" in
+  the PLB and SpiNeMap benchmarks is diluted by a shared non-mechanistic
+  random-initialization baseline. Corrected to a growth-based metric,
+  re-run at full seed count, preprint/README updated. The corrected
+  result is a sign flip (segregated and SpiNeMap-population net-lose
+  cross-type structure; interleaved and SpiNeMap-functional net-gain
+  it), which is stronger evidence for the thesis than the original
+  ratio, not weaker -- but exp42/42b/43/44 and the N=5,000 PLB share the
+  same unfixed issue and are flagged provisional pending the same
+  treatment (see gotcha #11 for exactly what still needs doing).
+- **Exploratory finding, NOT YET confirmatory (Exp 45/45b, 2026-08-29)**:
+  same "disprove it" pass, testing the project's founding cosmic-web/
+  "shape matters" intuition directly against Exp 42b/43's own coverage
+  mediator. Built a filament placement (Voronoi-ridge skeleton, later
+  reworked into a smoothed Gaussian-tube density field after a shape
+  review found the polygonal version's straight edges didn't match real
+  filament/void structure -- see the "Cosmic Web Check" artifact) and an
+  alpha-biased type-assignment mechanism to sweep its coverage down from
+  ~1.0, matched against Exp 43's blob family. Finding: at matched (though
+  not perfectly matched -- see below) coverage and count, isolated blobs
+  stay robustly positive down to coverage ~0.42; the connected filament
+  network collapses to NET-NEGATIVE growth by coverage ~0.5 (smooth
+  shape) or ~0.8 (polygonal shape) -- a real topology effect on top of
+  coverage (pooled R^2 0.54 -> 0.80 with a family term). A follow-up
+  ruled out the obvious confound: the shape rework (polygonal ->
+  smooth) did NOT create this effect -- both shapes show the collapse,
+  polygonal collapses earlier/harder, so the finding is about
+  connectivity/sparsity topology in general, with curvature a smaller,
+  separately real secondary effect (~245 units at matched coverage,
+  smooth more robust than polygonal). Mechanistic reading: isolated
+  blobs are locally redundant cliques that tolerate reach loss; a
+  connected filament network is sparse and chain-like, so reach loss
+  removes some of the few paths that exist -- closer to a percolation
+  threshold than a smooth coverage effect. **NOT confirmatory**: built
+  adaptively (parameters tuned live against results as the sweep ran),
+  not pre-registered like Exp 43's C1/C2/C3, and count was only
+  approximately matched between families at each coverage rung, not
+  tightly controlled. A pre-registered confirmatory version (predictions
+  and decision rule fixed in advance, count matched tightly at a small
+  number of coverage rungs) is the natural next step before this goes in
+  the preprint.
+- **Confirmatory follow-up (Exp 45c, 2026-08-29)**: built the
+  pre-registered version the exploratory pass above called for -- a 2x2
+  (blob/filament x high/low coverage), placements fixed in advance,
+  predictions and a decision rule registered before running, count
+  matched within 9% and coverage within 6% at both rungs (tighter than
+  the exploratory pass). Result: PARTIAL confirmation. The manipulation
+  check held (indistinguishable at high coverage, p=0.12, replicating a
+  third time). The real test was significant -- filament learns 1.81x
+  less than blob at matched low coverage, p=6.8e-10 -- but the sharp
+  sign-flip prediction did NOT hold: filament stayed net-positive (+381)
+  rather than crossing to net-negative. Reading: the exploratory pass's
+  extreme "collapse to loss" framing was partly an artifact of imperfect
+  count-matching (its low-coverage filament configs had count as low as
+  2.97 vs blob's 6.25, piling an extra count deficit on top of the real
+  topology effect). Once count is properly controlled, what remains is
+  smaller but genuinely confirmatory-grade: connected topology learns
+  measurably less than isolated topology at identical local reach
+  statistics. This is the first result in the project that earns the
+  cosmic-web "shape matters beyond coverage" framing at confirmatory
+  rigor -- report the calibrated 1.81x effect, not the sign flip.
+- **Layer 1 backlog closed (2026-08-29, same session)**: `exp42`,
+  `exp42b`, `exp43`, `exp44`, and the N=5,000 PLB were all reanalyzed
+  under the growth metric from gotcha #11 above. Nothing reversed;
+  every corrected number was as large as or larger than its raw-metric
+  counterpart. Full detail in gotcha #11.
+- **Layers 2 and 4 of the disprove-it pass, completed and folded into the
+  preprint (Exp 46, Exp 47; 2026-08-29, same session)**: Exp 46 (Layer 4,
+  generality check) confirms the mechanism precisely: locality gates
+  learning through TWO channels, not one -- a candidate-discovery radius
+  and a separate distance-weighted score term in the rewiring rule
+  (score = (V+0.01C)/(1+0.05d^2)). Making the discovery radius global
+  alone only partially closed the segregated-vs-interleaved gap (-727 ->
+  -523, gap still p=2.3e-17); removing BOTH channels (global radius +
+  unweighted score) collapsed it completely and convergently (+1556 vs
+  +1547, p=0.72 -- the same outcome by two routes, not just a
+  non-significant difference). This refines Section 3.2's mechanism
+  statement, which previously named only candidate discovery. Exp 47
+  (Layer 2, sparse long-range bridge) tested the real-cortex
+  counterexample (locally segregated + sparse long-range links) by
+  embedding a swept fraction of one population's neurons into the
+  partner population's territory: recovery of the segregated-interleaved
+  gap tracks bridge fraction roughly PROPORTIONALLY (10% budget recovers
+  21% of the gap, 40% recovers 74%), refuting the hoped-for cheap-fix
+  story -- no small bridge budget substitutes for real interleaving on
+  this substrate, as tested (individually-scattered neurons; a
+  structured bridging scheme was not tried). Both results, plus the
+  Exp 45c topology-confirmatory finding, are now written into the
+  preprint as new Section 4.10, with matching caveats added to Section 2
+  (the cosmic-web analogy's motivational status, with the universality
+  caution stated explicitly) and Section 6 (Limitations).
 - **Open, honestly-unresolved thread**: an "inverted-U" finding in
   Exp 35's timing-jitter sweep (moderate jitter beats both perfect
   synchrony and high jitter) survived three separate mechanism

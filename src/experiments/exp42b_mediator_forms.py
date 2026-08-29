@@ -34,6 +34,14 @@ model selection, not a confirmatory test. It is reported as such. A
 confirmatory test of the winning form needs a placement family not used to
 choose it.
 
+METRIC CORRECTION (2026-08-29, PROJECT_HISTORY gotcha #11): "taught" is
+diluted by a shared non-local random-initialization baseline (see
+exp32b_benchmark.py docstring). exp42's run-loop output now also prints
+"growth=" (plasticity-attributable, plastic_taught - frozen_taught) on the
+same line as "taught=", so this script parses both and runs the mediator
+comparison against each. Raw taught is kept for continuity; growth is the
+corrected primary target.
+
 Run (after exp42 has produced its output):
   python src/experiments/exp42b_mediator_forms.py <path-to-exp42-output.txt>
 """
@@ -85,9 +93,11 @@ def parse_exp42_output(path):
     """Pull the per-(strategy, pitch) learning means out of an exp42 run's
     stdout. The lines look like:
       SPINEMAP-POPULATION -- SpiNeMap (population graph)
-        rho=1.0 (pitch  5.0)  reach=  6.34  taught=    904 +/-     58  ...
+        rho=1.0 (pitch  5.0)  reach=  6.34  taught=    904 +/-     58  growth=...
+    Returns (taught_dict, growth_dict); growth_dict is empty if the exp42
+    output predates the 2026-08-29 growth-metric correction.
     """
-    learn = {}
+    taught, growth = {}, {}
     strat = None
     known = {s.upper(): s for s, _ in STRATEGIES}
     for line in open(path, encoding="utf-8", errors="replace"):
@@ -98,40 +108,24 @@ def parse_exp42_output(path):
         m = re.search(r"pitch\s+([\d.]+)\)\s+reach=\s*[\d.]+\s+taught=\s*(-?\d+)", line)
         if m and strat is not None:
             pitch = min(PITCHES, key=lambda p: abs(p - float(m.group(1))))
-            learn[(strat, pitch)] = float(m.group(2))
-    return learn
+            taught[(strat, pitch)] = float(m.group(2))
+            gm = re.search(r"growth=\s*([-+]?\d+)", line)
+            if gm:
+                growth[(strat, pitch)] = float(gm.group(1))
+    return taught, growth
 
 
-def main(path):
-    from scipy import stats
-
-    learn = parse_exp42_output(path)
-    print("=" * 78)
-    print("EXP 42b: which form of reach mediates? ({} conditions parsed)".format(len(learn)))
-    print("=" * 78)
-    if len(learn) < len(STRATEGIES) * len(PITCHES):
-        print("  WARNING: expected {} conditions, parsed {} -- run exp42 to completion".format(
-            len(STRATEGIES) * len(PITCHES), len(learn)))
-        if not learn:
-            return 1
-
-    rows = []
-    for (strat, pitch), taught in sorted(learn.items()):
-        coords, cids = placement_at(strat, pitch)
-        m = mediator_forms(coords, cids)
-        m.update(strategy=strat, pitch=pitch, taught=taught)
-        rows.append(m)
-
+def analyze(rows, target_key, label, stats):
+    y = np.array([r[target_key] for r in rows])
     print("\n  {:<22} {:>5} {:>9} {:>8} {:>8} {:>8} {:>9}".format(
-        "strategy", "rho", "taught", *FORMS))
+        "strategy", "rho", label, *FORMS))
     for r in sorted(rows, key=lambda r: (r["strategy"], r["pitch"])):
         print("  {:<22} {:>5.2f} {:>9.0f} {:>8.2f} {:>8.3f} {:>8.3f} {:>9.3f}".format(
-            r["strategy"], r["pitch"] / PLASTICITY_RADIUS, r["taught"],
+            r["strategy"], r["pitch"] / PLASTICITY_RADIUS, r[target_key],
             *[r[f] for f in FORMS]))
 
-    y = np.array([r["taught"] for r in rows])
     print("\n" + "=" * 78)
-    print("Pooled across ALL placement families and pitches -- does the form")
+    print("[{}] Pooled across ALL placement families and pitches -- does the form".format(label))
     print("collapse them onto one curve?")
     print("=" * 78)
     scored = {}
@@ -177,7 +171,7 @@ def main(path):
     fam = [r for r in rows if r["strategy"] == "topoforge"]
     if len(fam) > 2:
         c0 = [r["count"] for r in fam]
-        t0 = [r["taught"] for r in fam]
+        t0 = [r[target_key] for r in fam]
         print("\n  Within interleaved (coverage pinned at 1.000 at every pitch):")
         print("    count {:.2f} -> {:.2f} ({:.1f}x) changes learning {:.0f} -> {:.0f} "
               "({:.2f}x)".format(max(c0), min(c0), max(c0) / max(min(c0), 1e-9),
@@ -199,10 +193,47 @@ def main(path):
                 disc.append((a, b))
     print("\n  {} such discriminating pairs found:".format(len(disc)))
     for a, b in disc[:10]:
-        print("    {:<20}@{:.2f} (count {:.2f}, cover {:.2f}, taught {:.0f})  vs  "
-              "{:<20}@{:.2f} (count {:.2f}, cover {:.2f}, taught {:.0f})".format(
-                  a["strategy"], a["pitch"] / PLASTICITY_RADIUS, a["count"], a["cover"], a["taught"],
-                  b["strategy"], b["pitch"] / PLASTICITY_RADIUS, b["count"], b["cover"], b["taught"]))
+        print("    {:<20}@{:.2f} (count {:.2f}, cover {:.2f}, {} {:.0f})  vs  "
+              "{:<20}@{:.2f} (count {:.2f}, cover {:.2f}, {} {:.0f})".format(
+                  a["strategy"], a["pitch"] / PLASTICITY_RADIUS, a["count"], a["cover"], label, a[target_key],
+                  b["strategy"], b["pitch"] / PLASTICITY_RADIUS, b["count"], b["cover"], label, b[target_key]))
+    return best, scored[best][3]
+
+
+def main(path):
+    from scipy import stats
+
+    taught_learn, growth_learn = parse_exp42_output(path)
+    print("=" * 78)
+    print("EXP 42b: which form of reach mediates? ({} conditions parsed)".format(len(taught_learn)))
+    print("=" * 78)
+    if len(taught_learn) < len(STRATEGIES) * len(PITCHES):
+        print("  WARNING: expected {} conditions, parsed {} -- run exp42 to completion".format(
+            len(STRATEGIES) * len(PITCHES), len(taught_learn)))
+        if not taught_learn:
+            return 1
+
+    rows = []
+    for (strat, pitch), taught in sorted(taught_learn.items()):
+        coords, cids = placement_at(strat, pitch)
+        m = mediator_forms(coords, cids)
+        m.update(strategy=strat, pitch=pitch, taught=taught,
+                  growth=growth_learn.get((strat, pitch), float("nan")))
+        rows.append(m)
+
+    print("\n" + "#" * 78)
+    print("# LEGACY METRIC: raw taught mass (diluted by shared non-local init baseline)")
+    print("#" * 78)
+    analyze(rows, "taught", "taught", stats)
+
+    if growth_learn:
+        print("\n" + "#" * 78)
+        print("# CORRECTED METRIC: growth = plastic_taught - frozen_taught")
+        print("#" * 78)
+        analyze(rows, "growth", "growth", stats)
+    else:
+        print("\n  (no 'growth=' values found in {} -- this exp42 output predates the".format(path))
+        print("   2026-08-29 correction; re-run exp42 to get the corrected comparison.)")
     return 0
 
 

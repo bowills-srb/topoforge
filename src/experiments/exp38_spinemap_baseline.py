@@ -39,6 +39,15 @@ Run (staged, audit-before-trust):
   python src/experiments/exp38_spinemap_baseline.py --sanity-cluster
   python src/experiments/exp38_spinemap_baseline.py --sanity-place
   python src/experiments/exp38_spinemap_baseline.py            # full benchmark
+
+METRIC CORRECTION (2026-08-29, adversarial audit): run_life is imported
+verbatim from exp32b_benchmark, so this benchmark inherits the same
+raw-taught-mass contamination documented there -- a large non-local
+random-initialization baseline shared by every placement regardless of
+arrangement. The "lands X% of the way from segregated to interleaved"
+verdict below is now computed on plasticity-attributable growth
+(plastic_taught - frozen_taught), not raw taught mass. See
+PROJECT_HISTORY.md gotcha #11 and exp32b_benchmark.py's docstring.
 """
 import numpy as np
 import time
@@ -47,6 +56,8 @@ import sys
 sys.path.insert(0, "src")
 sys.path.insert(0, ".")
 sys.path.insert(0, "src/experiments")
+
+from scipy import stats
 
 # Physics + benchmark harness imported verbatim -- do NOT re-implement.
 from exp32b_benchmark import (
@@ -570,20 +581,45 @@ if __name__ == "__main__":
         print(" {:>10} {:>10}".format(vs_vlsi, vs_topo))
 
     print("\n" + "=" * 74)
+    print("CORRECTED: Plasticity-Attributable Learning (growth = plastic - frozen)")
+    print("Isolates what rewiring did from the shared non-local random-init")
+    print("baseline documented in exp32b_benchmark.py. This is the basis for")
+    print("the 'where does SpiNeMap land' verdict below, not raw taught mass.")
+    print("=" * 74)
+    print("{:>16} {:>16} {:>10}".format("placement", "mean growth+/-std", "sign"))
+    print("-" * 44)
+    growth_means = {}
+    growth_all = {}
+    for name, _ in strategies:
+        g = np.array([r["plastic"]["taught"] - r["frozen"]["taught"] for r in all_results[name]])
+        growth_all[name] = g
+        growth_means[name] = float(g.mean())
+        sign = "NET GAIN" if g.mean() > 0 else "NET LOSS"
+        print("{:>16} {:>10.0f}+/-{:<5.0f} {:>10}".format(name, g.mean(), g.std(), sign))
+
+    print("\n" + "=" * 74)
     print("WHERE DOES SpiNeMap LAND?")
     print("=" * 74)
-    vlsi_m = means["vlsi"]; topo_m = means["topoforge"]
-    span = max(topo_m - vlsi_m, 1e-9)
+    vlsi_g = growth_means["vlsi"]; topo_g = growth_means["topoforge"]
+    span_g = max(topo_g - vlsi_g, 1e-9)
     for name in ("spinemap-pop", "spinemap-func"):
-        frac = (means[name] - vlsi_m) / span
+        frac = (growth_means[name] - vlsi_g) / span_g
         if frac < 0.15:
-            verdict = "resembles our SEGREGATED baseline"
+            verdict = "resembles our SEGREGATED baseline -- SAME SIGN (net loss), not partial credit"
         elif frac > 0.85:
             verdict = "resembles INTERLEAVED"
         else:
             verdict = "lands BETWEEN segregated and interleaved"
-        print("  {:>14}: {:.0f}  ({:.0%} of the way vlsi->topoforge)  -> {}".format(
-            name, means[name], frac, verdict))
+        t, p = stats.ttest_ind(growth_all[name], growth_all["vlsi"], equal_var=False)
+        print("  {:>14}: growth={:+.0f}  ({:.0%} of the way vlsi->topoforge on GROWTH)  -> {}".format(
+            name, growth_means[name], frac, verdict))
+        print("  {:>14}  vs vlsi growth: Welch t={:.2f}, p={:.2e}".format("", t, p))
+    print("\n  For reference, the RAW taught-mass framing this replaces:")
+    for name in ("spinemap-pop", "spinemap-func"):
+        span_raw = max(means["topoforge"] - means["vlsi"], 1e-9)
+        frac_raw = (means[name] - means["vlsi"]) / span_raw
+        print("  {:>14}: raw={:.0f}  ({:.0%} of the way on RAW mass, diluted by shared baseline)".format(
+            name, means[name], frac_raw))
     print("\nInterpretation for the paper's 'invented baseline' limitation:")
     print("  - SpiNeMap on the PRE-PLASTICITY (population) graph is the honest")
     print("    map-time case: the to-be-learned associations are not yet synapses.")

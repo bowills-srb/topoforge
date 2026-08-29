@@ -1,12 +1,33 @@
 """Exp 32b: The Placement-Learning Benchmark (PLB)
 Publication-ready: 10 seeds, full statistics, benchmark table output.
 The litmus test: does placement strategy affect what a network can learn?
+
+METRIC CORRECTION (2026-08-29, adversarial audit): the "taught mass" used
+by Table 1 is a raw count of edges by cluster-type pair, but run_life's
+INITIAL edge set is drawn uniformly at random over all N neurons with no
+locality constraint at all -- independent of placement. That means every
+placement's "frozen" (pre-rewire) snapshot already contains a large,
+non-mechanistic baseline of the SAME size regardless of arrangement
+(~1430-1490 here), and Table 1's raw ratio is a ratio of two numbers both
+inflated by that shared baseline. Worse, for "vlsi" (segregated) the raw
+geometric adjacency between the measured type pairs (0,3)/(1,4) is
+EXACTLY ZERO (verified directly against SpatialGrid) -- so no local
+candidate for that pair type can ever be proposed to the rewiring rule.
+The mechanism's own prediction is a floor of 0, not "4x less"; the
+nonzero raw number Table 1 reports is leftover baseline, not learning.
+Table 1b below reports the plasticity-attributable signal directly:
+growth = plastic_taught - frozen_taught, isolating what rewiring itself
+did. Table 1 is KEPT for continuity/reproducibility of prior numbers,
+now with this disclosure attached; Table 1b is the corrected primary
+result. See PROJECT_HISTORY.md gotcha #11.
+
 Run: python src/exp32b_benchmark.py
 """
 import numpy as np
 import time
 import sys
 sys.path.insert(0, "src")
+from scipy import stats
 from sparse_state import SparsePairState
 from spatial import SpatialGrid
 
@@ -227,6 +248,24 @@ if __name__ == "__main__":
             vs_vlsi = "{:+.0f}%".format((m - baselines["vlsi"]) / baselines["vlsi"] * 100)
         print("{:>20} {:>7.0f}+/-{:<4.0f} {:>8} {:>12}".format(sn, m, s, vs_rand, vs_vlsi))
 
+    print("\nTable 1b: Plasticity-Attributable Learning (growth = plastic_taught - frozen_taught)")
+    print("CORRECTED primary result -- isolates what rewiring did from the shared")
+    print("non-local random-initialization baseline. See module docstring.")
+    print("{:>20} {:>14} {:>14}".format("placement", "mean growth+/-std", "sign"))
+    print("-" * 55)
+    growth_vals = {}
+    for sn, _ in strategies:
+        g = np.array([r["plastic"]["taught"] - r["frozen"]["taught"] for r in all_results[sn]])
+        growth_vals[sn] = g
+        sign = "NET GAIN" if g.mean() > 0 else "NET LOSS"
+        print("{:>20} {:>8.0f}+/-{:<5.0f} {:>14}".format(sn, g.mean(), g.std(), sign))
+    if "topoforge" in growth_vals and "vlsi" in growth_vals:
+        t, p = stats.ttest_ind(growth_vals["topoforge"], growth_vals["vlsi"], equal_var=False)
+        print("\n  interleaved vs segregated growth: Welch t={:.2f}, p={:.2e}".format(t, p))
+        print("  interleaved GAINS {:.0f} on average; segregated LOSES {:.0f} --".format(
+            growth_vals["topoforge"].mean(), -growth_vals["vlsi"].mean()))
+        print("  a sign flip, not merely a magnitude difference.")
+
     print("\nTable 2: Adaptation After Workload Change (old vs new mass post-reversal)")
     print("{:>20} {:>10} {:>10} {:>8}".format(
         "placement", "old_03", "new_14", "ratio"))
@@ -253,10 +292,21 @@ if __name__ == "__main__":
     vl = baselines.get("vlsi", 0)
     if vl > 0:
         ratio = tf / vl
+        tf_g = growth_vals["topoforge"].mean() if "topoforge" in growth_vals else None
+        vl_g = growth_vals["vlsi"].mean() if "vlsi" in growth_vals else None
         print("  Segregated placement (grouping functionally-correlated neurons")
-        print("  into separate cores) produces {:.1f}x LESS learned structure".format(ratio))
+        print("  into separate cores) produces {:.1f}x LESS RAW learned structure".format(ratio))
         print("  than interleaved placement, with no energy advantage during")
-        print("  frozen operation.")
+        print("  frozen operation. (This raw ratio is diluted by a shared non-local")
+        print("  random-initialization baseline -- see Table 1b.)")
+        if tf_g is not None and vl_g is not None:
+            print("")
+            print("  CORRECTED (plasticity-attributable): interleaved GAINS {:.0f} units".format(tf_g))
+            print("  of cross-type structure during the plastic phase; segregated LOSES")
+            print("  {:.0f} -- structural plasticity in the segregated condition doesn't".format(-vl_g))
+            print("  learn weakly, it actively erodes non-mechanistic pre-wiring toward")
+            print("  same-type structure, because it has zero local candidates of the")
+            print("  measured type pair to grow instead. A sign flip, not just a ratio.")
         print("")
         print("  Mapping tools optimize communication energy, an objective not")
         print("  aligned with learnability on plastic hardware. Whether a given")

@@ -34,9 +34,10 @@ Welch p = 3.5×10⁻¹⁴). The penalty is not confined to a
 baseline of our own construction: a from-scratch reimplementation of
 a published mapping tool (SpiNeMap), given the connectivity graph it
 actually has at map time — one that cannot contain associations
-plasticity has yet to build — produces a placement that learns 3.4x
-less than interleaved and sits only 8% of the way from our segregated
-baseline toward interleaved. The same optimizer becomes harmless when
+plasticity has yet to build — produces a placement whose
+plasticity-attributable learning is net-negative, in the same regime as
+our segregated baseline rather than partway toward interleaved (Section
+4.6). The same optimizer becomes harmless when
 the to-be-learned associations are declared to it up front, which
 locates the problem in the graph a mapper is given rather than in
 wire-length optimization as such. Sweeping the fabric's core pitch
@@ -122,6 +123,8 @@ neuromorphic-hardware citations above; a reader pursuing this
 connection should consult the interleaving-effect literature directly
 rather than treat this paper as an authoritative citation of it.
 
+**A structural analogy, and a caution about it.** Part of the original motivation for this line of investigation was a visual resemblance between the void-and-filament structure of large-scale cosmic matter distribution and the branching structure of synaptic connectivity. We flag this motivation for transparency, and immediately caution against over-reading it: filament-and-void geometry is a generic outcome of essentially any system built from local interaction rules acting on a stochastically seeded field — gravitational clustering, reaction-diffusion, diffusion-limited aggregation, and percolation near a critical threshold all produce qualitatively similar geometry despite sharing no physical mechanism. Structural resemblance between two such systems is therefore not, by itself, evidence of a shared operative principle; it is closer to a generic signature of "local rule plus randomness" than a specific discovery about either system. Section 4.10 reports the one place in this paper where that analogy was tested on its own mechanistic terms rather than taken as inspiration, with a result that does not straightforwardly vindicate it.
+
 **Self-powered analogue neuromorphic sensing.** Kim, Zhao, Sud, Xu,
 Zhao, Liao, Zhang, Midya, Qiu, and Yang (2026) demonstrate a
 memristor-based analogue system performing multimodal sensing,
@@ -171,6 +174,18 @@ condition, or graph-community co-membership in the geometry-free
 condition). All three decay lazily — `value(t) = stored *
 decay^(t - last_touched)` — which keeps the implementation tractable
 at scale without ever materializing a dense N x N state matrix.
+
+Locality enters the rewiring rule through two separate channels, not
+one, a distinction confirmed directly rather than assumed (Section
+4.10): a bounded radius gates which pairs can accrue C/E/V state at
+all (**candidate discovery**), and a separate distance discount, 1/(1
++ 0.05 d²), inside the score that ranks discovered candidates for a
+limited number of rewiring slots each epoch (**candidate scoring**).
+A placement can therefore fail to learn an association either because
+the pair never becomes a candidate, or because it becomes a candidate
+but is consistently outcompeted by nearer ones — the paper's mechanism
+claim depends on both channels together, not on locality-of-discovery
+alone.
 
 ### 3.3 Placement strategies compared
 
@@ -226,6 +241,34 @@ alongside a Welch p-value.) As noted in Section 3.4, the very large
 Cohen's d values reflect the low noise of a fully controlled
 simulation and should not be read as a prediction of effect
 magnitude on physical hardware.
+
+**Metric correction (2026-08-29, adversarial audit).** The score above
+is a raw count of edges landing on the associated cluster-type pair.
+The benchmark's *initial* edge set, however, is drawn uniformly at
+random over all N neurons with no locality constraint at all —
+identical in expectation regardless of placement — so both conditions'
+raw scores are inflated by the same non-mechanistic baseline (~1430 at
+N=900). For segregated placement specifically, the raw local
+adjacency between the measured type pair is exactly zero (verified
+directly against the deployed `SpatialGrid` radius), so the mechanism
+this paper argues for predicts a floor of *zero* learned structure for
+that condition, not merely "4.2x less." Isolating the
+plasticity-attributable signal directly — growth = (post-plasticity
+score) − (pre-rewire score), using the checkpoint the benchmark already
+records — gives a materially different and, we think, more accurate
+picture: at N=900, ten seeds, interleaved placement *gains* 1462.3 +/-
+36.4 units of cross-type structure during the plastic phase; segregated
+placement *loses* 726.6 +/- 2.3 (Welch t = 183.2, p = 1.9x10^-17). This
+is a sign flip, not a magnitude difference: segregated placement does
+not learn the association weakly, it actively erodes whatever
+cross-type structure existed by chance from the random initializer,
+because it has zero local candidates to grow toward instead. We regard
+this corrected, delta-based quantity as the primary result and the raw
+4.20x/3.85x ratios above as a diluted restatement of it, retained for
+continuity with the originally published numbers. The sign flip
+replicates at N=5,000: interleaved placement gains 7362 +/- 193 units;
+segregated placement loses 4014 +/- 1 (Welch t = 176.8, p = 3.0x10^-17).
+The effect is not a small-N artifact.
 
 During frozen (non-plastic) operation, energy cost differs
 negligibly between placement strategies — the entire learning penalty
@@ -355,17 +398,19 @@ A structural audit before any learning (Table 3) shows what the corrected mapper
 | SpiNeMap — population graph | 71.1% | 66.7% |
 | SpiNeMap — functional graph | 100.0% | 100.0% |
 
-Learning quality follows that structure, and the two graph conditions fall on opposite sides of the benchmark (Table 4). On the population graph — the honest map-time case — SpiNeMap lands 7.7% of the way from our segregated baseline toward interleaved: it learns 3.37x less than interleaved placement (876.3 ± 49.8 vs 2950.1 ± 37.7; Welch p = 4.6×10⁻²⁵, d = 46.9), statistically distinguishable from our hand-rolled segregated condition but only 1.25x above it. On the functional graph it lands at 99.8% — indistinguishable from interleaved (2946.5 ± 26.1, a 0.1% difference, p = 0.81).
+Learning quality follows that structure, and the two graph conditions fall on opposite sides of the benchmark (Table 4). On the population graph — the honest map-time case — SpiNeMap lands 7.7% of the way from our segregated baseline toward interleaved on raw taught mass: it learns 3.37x less than interleaved placement (876.3 ± 49.8 vs 2950.1 ± 37.7; Welch p = 4.6×10⁻²⁵, d = 46.9), statistically distinguishable from our hand-rolled segregated condition but only 1.25x above it. On the functional graph it lands at 99.8% — indistinguishable from interleaved (2946.5 ± 26.1, a 0.1% difference, p = 0.81).
 
-**Table 4.** Learning quality (taught mass after the plastic phase), mean ± s.d. over ten seeds, N=900. Position is on the segregated → interleaved axis, where 0% is our segregated baseline and 100% is interleaved.
+**Metric correction (2026-08-29, adversarial audit).** As in Section 4.1, raw taught mass is inflated by a shared non-local random-initialization baseline common to every placement, so the "7.7% of the way" figure understates how badly the population graph fares. Isolating plasticity-attributable growth directly, ten seeds: SpiNeMap-population *loses* 554.3 ± 46.9 units of cross-type structure during the plastic phase — the same sign as our segregated baseline's loss of 726.6 ± 2.3, not a partial version of interleaved's gain (Welch t = 10.97 vs. segregated growth, p = 1.6×10⁻⁶). SpiNeMap-functional gains 1516.0 ± 25.3, statistically indistinguishable in kind from interleaved's gain of 1462.3 ± 36.4 (t = 271.3 vs. segregated growth, p = 4.4×10⁻¹⁹). The corrected reading strengthens rather than weakens the section's conclusion: SpiNeMap given the map-time graph does not merely learn less than interleaved, it is mechanistically in the same regime as our segregated baseline — actively eroding non-mechanistic pre-wiring rather than building any cross-type structure at all.
 
-| Placement | Taught mass | vs. segregated | Position |
+**Table 4.** Learning quality, mean ± s.d. over ten seeds, N=900. "Taught mass" (raw, retained for continuity) is inflated by a shared non-mechanistic baseline (Section 4.1); "Growth" (plastic − pre-rewire, the corrected primary quantity) isolates what structural plasticity itself did. Position is on the segregated → interleaved axis using growth.
+
+| Placement | Taught mass | Growth | Position (growth) |
 |---|---|---|---|
-| Segregated (ours) | 703.3 ± 1.9 | — | 0% |
-| SpiNeMap — population graph | 876.3 ± 49.8 | +25% | 7.7% |
-| Random | 2733.7 ± 23.3 | +289% | 90.4% |
-| Interleaved (ours) | 2950.1 ± 37.7 | +319% | 100% |
-| SpiNeMap — functional graph | 2946.5 ± 26.1 | +319% | 99.8% |
+| Segregated (ours) | 703.3 ± 1.9 | −726.6 ± 2.3 | 0% |
+| SpiNeMap — population graph | 876.3 ± 49.8 | −554.3 ± 46.9 | 7.9% |
+| Random | 2733.7 ± 23.3 | +1327.0 ± 23.3 | 93.9% |
+| Interleaved (ours) | 2950.1 ± 37.7 | +1462.3 ± 36.4 | 100% |
+| SpiNeMap — functional graph | 2946.5 ± 26.1 | +1516.0 ± 25.3 | 102.5% |
 
 The conclusion is the opposite of what we previously reported, and it strengthens rather than weakens the paper's central claim. A published, communication-minimizing mapping tool, given the connectivity graph it actually has at map time, **does** produce the pathological placement: our hand-rolled segregated baseline is not a strawman but a close stand-in for what such a tool emits on a plastic substrate. What rescues SpiNeMap is not its objective but its input — declaring the to-be-learned associations up front moves it the entire way to interleaved. This is a sharper and more actionable statement of the problem than "wire-length optimization is harmful": the harm comes from optimizing a communication objective over a graph that omits the associations plasticity has yet to build, and the same optimizer becomes harmless the moment those associations are in the graph it is given. Since a plastic system's whole purpose is to learn associations that were not known at map time, the population-graph case is the one that matters in practice.
 
@@ -469,11 +514,22 @@ One structural fact makes the central comparison exact rather than statistical. 
 
 **Inference energy is not approximately equal; it is identical.** Section 4.1 reported that frozen-phase energy "differs negligibly" between placements. It differs not at all: across all eight seeds the segregated and interleaved conditions record bit-identical frozen energy (5.01906×10⁶), which follows from their sharing coordinates and initial connectivity exactly. The claim that the learning penalty is incurred at zero inference-energy cost can be stated without hedging.
 
-**Choosing learnability does cost communication energy, and the cost is 1.6%.** We predicted before running that interleaving would carry no post-plasticity energy penalty. That prediction is falsified: interleaved placement ends with 1.0162× the wire energy of segregated (2.5656×10⁶ vs 2.5247×10⁶, Welch *p* = 1.9×10⁻⁹). The effect is real and statistically unambiguous. It is also, in magnitude, 1.6% — bought with 4.20× the learned structure. We report the falsification rather than the framing that would have been convenient, but we do not think a 1.6% energy premium for a 4.2-fold learning gain should be described as a tradeoff in any practical sense. Per unit of learned structure the ordering inverts sharply: segregated placement costs 3589 energy units per unit taught against interleaved's 867, a factor of 4.1.
+**Choosing learnability does cost communication energy, and the cost is 1.6%.** We predicted before running that interleaving would carry no post-plasticity energy penalty. That prediction is falsified: interleaved placement ends with 1.0162× the wire energy of segregated (2.5656×10⁶ vs 2.5247×10⁶, Welch *p* = 1.9×10⁻⁹). The effect is real and statistically unambiguous. It is also, in magnitude, 1.6%. **Metric correction (2026-08-29):** "bought with 4.20× the learned structure" understates what the 1.6% premium actually buys. On the corrected, delta-based learning metric (Section 4.1), segregated placement's growth is *negative* (−726) while interleaved's is positive (+1471) — the 1.6% energy premium is not purchasing a 4-fold quantity increase, it is purchasing the difference between a placement that erodes structure and one that builds it, a distinction a same-sign ratio cannot express. Per unit of learned structure the old ordering inverts sharply (segregated: 3589 energy units per unit taught vs. interleaved's 867); the corrected version does not have a finite ratio at all, since segregated's plasticity-attributable denominator is negative.
 
 **Plasticity reduces communication energy.** In every condition, post-plasticity energy is roughly half the frozen value (≈2.5×10⁶ against ≈5.0×10⁶). This is a consequence of the rewiring rule's distance discount: connections are replaced preferentially with nearby partners, so a network that rewires ends up cheaper to communicate across than the random initial connectivity it started from, regardless of placement. Structural plasticity is not merely compatible with a communication-energy objective here; left to run, it pursues one.
 
-**The association-aware mapper is the best available option, but it does not dominate outright.** SpiNeMap given the functional graph achieves the lowest energy-per-unit-learned of any condition tested (847) and beats our segregated baseline on both axes at once — 0.990× the energy at 4.20× the learning. Against the other high-learning conditions it trades rather than dominates: relative to interleaved placement it spends 0.975× the energy for 0.997× the learning, and relative to its own population-graph counterpart it spends 1.001× the energy for 3.37× the learning. An earlier version of this paper described it as Pareto-dominant over every condition tested, with no axis on which it was worse; that was measured before the tie-breaking correction of Section 3.4 and is not correct. The differences on the losing axes are fractions of a percent — 0.3% of learning, 0.1% of energy — and we would not want a reader to draw a practical distinction from them in either direction. The defensible statement is that supplying the association structure costs essentially nothing on the energy axis while multiplying learning several-fold relative to the graph a mapper actually has at map time, and that this holds at every fabric density tested (Section 4.8).
+**The association-aware mapper is the best available option, but it does not dominate outright.** SpiNeMap given the functional graph achieves the lowest energy-per-unit-learned of any condition tested and beats our segregated baseline on both axes at once — 0.990× the energy at 4.20× the raw-taught learning. Against the other high-learning conditions it trades rather than dominates on raw taught mass: relative to interleaved placement it spends 0.975× the energy for 0.997× the learning, and relative to its own population-graph counterpart it spends 1.001× the energy for 3.37× the learning. An earlier version of this paper described it as Pareto-dominant over every condition tested, with no axis on which it was worse; that was measured before the tie-breaking correction of Section 3.4 and is not correct. **Metric correction (2026-08-29):** on the corrected, delta-based learning metric the comparisons against segregated and the population-graph mapper are sign flips, not ratios — functional-graph SpiNeMap's growth is +1521 against segregated's −726 and population-graph's −555 — while the comparison against interleaved remains an even trade (growth ratio 1.03×, energy 0.975×). The differences that remain on the losing axis (interleaved) are small — a few percent either way — and we would not want a reader to draw a practical distinction from them. The defensible statement is that supplying the association structure costs essentially nothing on the energy axis while being the only tested condition, other than interleaving itself, that reliably builds rather than erodes cross-type structure, and that this holds at every fabric density tested (Section 4.8).
+
+### 4.10 Mechanism validation, a sparse-bridge counterexample, and connectivity topology
+
+Three further checks, run 2026-08-29 as a deliberate adversarial pass against the paper's own central claim rather than an extension of it. N=900, the PLB substrate, eight seeds unless noted.
+
+**The mechanism holds when both its locality channels are removed together, and not before.** The claim throughout this paper is that a local plasticity rule cannot discover associations between neurons it cannot reach. We tested this directly by forcing the rule to be non-local and checking that the placement effect disappears, as the mechanism requires. A first attempt — expanding the candidate-discovery radius to exceed the substrate's extent — only partially closed the gap (segregated growth improved from −727 to −523, but a large, significant gap remained, Welch *p* = 2.3×10⁻¹⁷). The reason is that locality enters twice (Section 3.2): expanding the discovery radius fixes which pairs can become candidates, but the rewiring rule's score, (V + 0.01·C) / (1 + 0.05·d²), still weights discovered candidates by true physical distance. Removing *both* channels — global candidate discovery and an unweighted score — collapses the gap completely: segregated and interleaved converge to statistically indistinguishable, similarly-sized positive growth (+1556 vs. +1547, Welch *p* = 0.72), not merely a non-significant difference but the same outcome by two independent routes. This is confirmatory evidence for the mechanism as now stated precisely in Section 3.2, and it corrects an imprecision in earlier statements of it that named only candidate discovery.
+
+**A sparse long-range bridge does not cheaply substitute for interleaving.** Real cortex is locally segregated at the columnar scale, with cross-domain association carried by sparse long-range white-matter projections rather than local mixing — a standing counterexample worth testing directly rather than dismissing. We relocated a small fraction of one associated population's neurons from their segregated block into the partner population's territory (physically embedded neurons, not synthetic edges — a fair analogue of a long-range projection terminating where local circuitry can actually use it) and swept that fraction from 0% to 40%. Recovery of the segregated-to-interleaved gap tracks the bridge fraction *roughly proportionally* rather than the strongly front-loaded curve a "cheap sparse fix" would need: a 10% embedded-neuron budget recovers only 21% of the gap, and 40% is needed to recover 74%. Every step is individually significant (*p* < 10⁻⁷ throughout) and monotonic, as predicted, but the shape refutes the practical hope that a small bridge budget approximates interleaving on this substrate. We register the caveat that only individually-scattered embedded neurons were tested; a structured bridging scheme (e.g. bridge neurons clustered together, or closer to how a real cortical projection pattern terminates) might behave differently, and this result should be read as refuting the naive version of the counterexample, not every possible one.
+
+**Connectivity topology has a real effect beyond first-order reach statistics, confirmed at matched count and coverage — smaller than initially measured, and in the opposite direction from what a naive reading of the cosmic-web analogy motivating this project would predict.** Sections 4.7-4.8 established that coverage (whether a neuron has any reachable partner) is the dominant mediator of the placement effect. We asked the sharper question directly: at *matched* coverage and count, does the large-scale shape of the connectivity — a connected, sparse, filament-like network versus isolated, locally-redundant blobs — matter on its own? An exploratory sweep (filament geometry generated as a smoothed density field over a Voronoi ridge skeleton, chosen for genuine curved, void-containing structure after an earlier polygonal version was correctly flagged as not resembling real filament/void geometry) found a striking, if imprecisely matched, result: isolated blobs stayed robustly positive down to coverage ≈0.42, while the connected filament network collapsed to net-negative growth by coverage ≈0.5. A confirmatory follow-up — a 2×2 design (topology × coverage level) with placements fixed in advance, predictions and a decision rule registered before running, and count matched within 9% and coverage within 6% (substantially tighter than the exploratory pass) — produced a partial confirmation: the high-coverage manipulation check replicated a third time (indistinguishable, *p* = 0.12), and the low-coverage contrast was significant (filament learns 1.81× less than blob at matched coverage, *p* = 6.8×10⁻¹⁰), but filament growth remained net-*positive* (+381) rather than crossing to net-negative as the exploratory pass suggested. The calibrated reading is that the exploratory magnitude was partly an artifact of imperfectly matched count (its low-coverage filament configurations had count as low as half the blob comparison point, stacking an additional count deficit on top of the real topology effect); once controlled, a real, confirmatory-grade, but smaller effect remains. We read this mechanistically as a redundancy effect rather than a coverage effect: isolated blobs are locally-redundant cliques that tolerate partial reach loss, while a connected, sparse, chain-like network has no redundant path to fall back on, so the same coverage loss costs more. This is, to our knowledge, the first result in this project's history that depends on connectivity topology beyond simple local-reach statistics, but its direction is the opposite of what the cosmic-web analogy that motivated the investigation would suggest: connected, web-like structure is *more* fragile under reduced local opportunity than fragmented structure, not more robust. We regard the resemblance between cosmic-web and cortical connectivity patterns that motivated this line of inquiry as visually real but mechanistically unproven; local-interaction systems generically produce filament/void geometry regardless of the underlying physics (Section 2), so structural resemblance alone is not evidence of a shared operative principle, and this section's result is offered as the first test of that principle on its own mechanistic terms, not a vindication of the analogy that suggested testing it.
+
 ---
 
 ## 5. Discussion
@@ -562,21 +618,44 @@ own wire-length-minimizing heuristic, not the output of a published
 mapping tool. Section 4.6 addresses this directly: we implemented
 SpiNeMap's actual algorithm and found that, on the population graph
 available at map time, it *does* reproduce the pathological
-placement — 3.37x below interleaved, only 7.7% of the way from our
-segregated baseline toward it. Our hand-rolled baseline is therefore
-a reasonable stand-in for a deployed tool's output on a plastic
-substrate, not a strawman, though it remains somewhat more extreme
-(SpiNeMap's placement is 1.25x above it, and unlike ours leaves
-roughly 70% of correlated neurons with at least one partner in
-reach). The decisive variable is the graph the mapper is given: with
-the to-be-learned associations declared up front, the same tool lands
-at interleaved. A previous version of this section drew the opposite
-conclusion from a partitioner that had silently failed on the input
-the placement path uses; the error, its cause, and the fix are
-documented in Section 4.6. That episode is itself a limitation worth
-stating: these results rest on a single implementation, and one
-load-bearing component of it was wrong for a period without any
-result looking anomalous.
+placement — its plasticity-attributable learning is net-negative, the
+same regime as our segregated baseline, not a diluted version of
+interleaved's gain. Our hand-rolled baseline is therefore a
+reasonable stand-in for a deployed tool's output on a plastic
+substrate, not a strawman, though it remains somewhat less severe on
+raw taught mass (SpiNeMap's placement is 1.25x above ours there, and
+unlike ours leaves roughly 70% of correlated neurons with at least one
+partner in reach) despite landing in the same net-loss regime on the
+corrected growth metric. The decisive variable is the graph the mapper
+is given: with the to-be-learned associations declared up front, the
+same tool lands at interleaved. A previous version of this section drew
+the opposite conclusion from a partitioner that had silently failed on
+the input the placement path uses; the error, its cause, and the fix
+are documented in Section 4.6. That episode is itself a limitation
+worth stating: these results rest on a single implementation, and one
+load-bearing component of it was wrong for a period without any result
+looking anomalous. A second, unrelated implementation issue in the same
+family was found and corrected on 2026-08-29 (Section 4.1, Section 4.6):
+the shared benchmark harness's raw "taught mass" metric was diluted by
+a non-mechanistic random-initialization baseline common to every
+placement; the corrected, delta-based metric is now primary throughout.
+The fabric-sparsity sweep (Section 4.8), the coverage-mediator work
+(Section 4.7 and its confirmatory test), the energy-learnability
+frontier (Section 4.9), and the N=5,000 replication all depend on the
+same harness and metric and have now been reanalyzed under the
+correction as well (same day). Every one of them held or strengthened:
+the coverage-vs-count mediator comparison is essentially unchanged
+(R^2 0.837 raw vs. 0.829 corrected, both far above count's ~0.27); the
+fabric-sparsity crossover is intact, and a marginal penalty the
+association-aware mapper appeared to show at the tightest tested pitch
+on raw taught mass (p=0.0002) is NOT significant on the corrected metric
+(p=0.12) — the mapper is more robust to fabric density than the original
+raw-metric report suggested, not less; the energy frontier's dominance
+results sharpen into sign flips against segregated and the population-
+graph mapper. No result in this family reversed under the correction; in
+every case the corrected number was as large as or larger than the raw
+one, consistent with the raw metric diluting rather than manufacturing
+the effects reported here.
 
 **Mediator form and its limits.** The coverage form of the reach
 metric adopted in Section 4.8 was chosen after observing that the
@@ -589,9 +668,12 @@ neuron's reachable neighbourhood that consists of partners has a
 real, independent, though much smaller effect (1.06x for a 2.1x
 change, density-controlled). Second, none of these forms is
 quantitatively calibrated — the same relative drop in coverage
-produces a 1.32x learning penalty in one setting and a 3.37x penalty
-in another, so the metric predicts direction and ordering reliably
-but not magnitude. A mapper could use it as a constraint; it should
+produces different-magnitude penalties in different geometries (a
+1.32x raw-mass ratio in the confirmatory test of Section 4.7 against
+Section 4.6's SpiNeMap result, though the latter's own metric is under
+revision — see the correction noted above), so the metric predicts
+direction and ordering reliably but not calibrated magnitude. A mapper
+could use it as a constraint; it should
 not yet be used as a predictor of how much learning a given placement
 will cost.
 
@@ -623,6 +705,8 @@ inference-only comparison that cannot test the central claim
 directly.
 
 **Real-data result variance and scope.** The Section 4.5 real-data result was strengthened after initial drafting: a twelve-seed, twenty-distinct-sample-per-class replication directly tested and rejected the concern that four examples per class was too narrow a sample — five-fold more distinct data produced a statistically indistinguishable ratio. The remaining open question is not sample size but training-exposure regime: reported magnitude ranges from 5.1x to 8.2x depending on how long the network is exposed before readout, and segregated-condition outcomes remain intrinsically high-variance (60-70% relative) even at n=12. We consider the direction of this result — segregation harms real-data learning, substantially and reliably — solidly established; the precise magnitude should still be read as regime-dependent rather than as a single fixed number.
+
+**Section 4.10's three checks, individually.** The sparse-bridge result tested only individually-scattered embedded neurons; a structured bridging scheme was not tried, and we do not claim the naive version tested exhausts what "sparse long-range connectivity" could mean on this substrate. The connectivity-topology result's exploratory pass used approximately-matched count and coverage between filament and blob families and reported a magnitude (net-negative crossover) that the confirmatory pass, with tighter matching, did not reproduce; we report the confirmatory number (1.81x at matched coverage/count) as the trustworthy one and flag the larger exploratory number as superseded, not as an additional independent finding. Both the mechanism-validation and topology results are single-implementation findings at N=900 only, subject to the same independent-replication caveat as the rest of this paper.
 
 ---
 

@@ -45,6 +45,15 @@ PREDICTIONS (registered before running):
 Run with the checked-in venv (needs scipy):
   venv/Scripts/python.exe src/experiments/exp44_energy_frontier.py --audit
   venv/Scripts/python.exe src/experiments/exp44_energy_frontier.py
+
+METRIC CORRECTION (2026-08-29, PROJECT_HISTORY gotcha #11): raw "taught"
+mass is diluted by a shared non-local random-initialization baseline (see
+exp32b_benchmark.py docstring). This script already records taught at the
+frozen checkpoint for every condition, so growth = plastic_taught -
+frozen_taught (plasticity-attributable) is now reported alongside it
+throughout, as the corrected primary learning quantity for the "E per
+learned unit" and P3 dominance comparisons. Energy (P1/P2) is unaffected --
+it was never taught-metric-dependent.
 """
 import numpy as np
 import time
@@ -147,15 +156,17 @@ def report(results):
     print("\n" + "=" * 78)
     print("THE FRONTIER -- communication energy vs what was learned")
     print("=" * 78)
-    print("  {:<22} {:>12} {:>12} {:>10} {:>12}".format(
-        "condition", "frozen E", "plastic E", "taught", "E per taught"))
+    print("  {:<22} {:>12} {:>12} {:>10} {:>12} {:>10} {:>12}".format(
+        "condition", "frozen E", "plastic E", "taught", "E/taught", "growth", "E/growth"))
     for name, _ in CONDITIONS:
         r = results[name]
         fe = r["frozen"]["energy"].mean()
         pe = r["plastic"]["energy"].mean()
         tm = r["plastic"]["taught"].mean()
-        print("  {:<22} {:>12.4g} {:>12.4g} {:>10.0f} {:>12.4g}".format(
-            name, fe, pe, tm, pe / max(tm, 1e-9)))
+        gm = tm - r["frozen"]["taught"].mean()
+        eg = "{:>12.4g}".format(pe / gm) if gm > 0 else "{:>12}".format("n/a(<=0)")
+        print("  {:<22} {:>12.4g} {:>12.4g} {:>10.0f} {:>12.4g} {:>+10.0f} {}".format(
+            name, fe, pe, tm, pe / max(tm, 1e-9), gm, eg))
 
     seg, inter = results["vlsi"], results["topoforge"]
     print("\n" + "=" * 78)
@@ -178,13 +189,29 @@ def report(results):
     print("  interleaved {:.6g} +/- {:.3g}".format(pe_i.mean(), pe_i.std(ddof=1)))
     print("  interleaved / segregated = {:.4f}x   Welch p = {:.3g}".format(
         pe_i.mean() / pe_s.mean(), p))
+    seg_growth = seg["plastic"]["taught"].mean() - seg["frozen"]["taught"].mean()
+    inter_growth = inter["plastic"]["taught"].mean() - inter["frozen"]["taught"].mean()
+    print("  [corrected] segregated growth {:+.0f}  interleaved growth {:+.0f}".format(
+        seg_growth, inter_growth))
     if pe_i.mean() > pe_s.mean() and p < 0.05:
         print("  -> P2 FALSIFIED: interleaving does cost energy. The Discussion's")
         print("     tradeoff sentence stands and the recommendation has a price.")
+        if seg_growth > 0:
+            print("     Learning ratio (raw taught): {:.2f}x more.".format(
+                inter["plastic"]["taught"].mean() / seg["plastic"]["taught"].mean()))
+        else:
+            print("     Learning ratio is now a SIGN FLIP (segregated growth is")
+            print("     negative), not a simple ratio -- see gotcha #11.")
     elif p < 0.05:
-        print("  -> P2 HOLDS, strongly: interleaving costs LESS energy AND learns")
-        print("     {:.2f}x more. The objectives are aligned here, not opposed.".format(
-            inter["plastic"]["taught"].mean() / seg["plastic"]["taught"].mean()))
+        print("  -> P2 HOLDS, strongly: interleaving costs LESS energy.")
+        if seg_growth > 0:
+            print("     Also learns {:.2f}x more (raw taught). The objectives are".format(
+                inter["plastic"]["taught"].mean() / seg["plastic"]["taught"].mean()))
+            print("     aligned here, not opposed.")
+        else:
+            print("     On the corrected growth metric this is even sharper: segregated")
+            print("     growth is negative ({:+.0f}) while interleaved's is positive".format(seg_growth))
+            print("     ({:+.0f}) -- a sign flip, not a ratio.".format(inter_growth))
     else:
         print("  -> P2 holds weakly: no significant energy difference either way,")
         print("     so the learning gain is free rather than paid for.")
@@ -193,14 +220,20 @@ def report(results):
     print("P3 -- does the association-aware mapper dominate?")
     print("=" * 78)
     fn = results["spinemap-functional"]
+    fn_growth = fn["plastic"]["taught"].mean() - fn["frozen"]["taught"].mean()
     for other in ("topoforge", "vlsi", "spinemap-population"):
         o = results[other]
+        o_growth = o["plastic"]["taught"].mean() - o["frozen"]["taught"].mean()
         de = fn["plastic"]["energy"].mean() / o["plastic"]["energy"].mean()
         dt = fn["plastic"]["taught"].mean() / o["plastic"]["taught"].mean()
         verdict = ("DOMINATES" if de <= 1.0 and dt >= 1.0 else
                    "dominated" if de >= 1.0 and dt <= 1.0 else "trades off")
-        print("  vs {:<22} energy {:.3f}x, learning {:.3f}x  -> {}".format(
-            other, de, dt, verdict))
+        if o_growth <= 0 < fn_growth:
+            growth_note = "growth: {:+.0f} vs {:+.0f} (sign flip, not a ratio)".format(fn_growth, o_growth)
+        else:
+            growth_note = "growth ratio {:.3f}x".format(fn_growth / o_growth) if o_growth != 0 else "n/a"
+        print("  vs {:<22} energy {:.3f}x, taught {:.3f}x  -> {}  [{}]".format(
+            other, de, dt, verdict, growth_note))
 
     print("\n" + "=" * 78)
     print("Read the frontier column, not any single number: if the best-learning")
