@@ -470,6 +470,43 @@ correct until checked.
   preprint as new Section 4.10, with matching caveats added to Section 2
   (the cosmic-web analogy's motivational status, with the universality
   caution stated explicitly) and Section 6 (Limitations).
+- **Usefulness thread: partial-knowledge sweep (Exp 48/49/49b/49c;
+  2026-08-29, same session), folded into preprint Section 4.11**: the
+  first result in this project's history that tests actionability, not
+  correctness -- Section 4.6 only ever tested zero-knowledge vs
+  complete-knowledge; this asks how much PARTIAL foreknowledge a mapper
+  needs. Exp 48 generalized SpiNeCluster's population/functional switch
+  into a continuous knowledge_frac (weight-confidence, not edge-coverage,
+  model of partial knowledge) on the SYNTHETIC pattern graph: growth stays
+  flat and negative from 0-75% knowledge (-555 to -414) and jumps only at
+  100% (+1521) -- a cliff, not a slope, because SpiNeCluster is a hard
+  combinatorial partitioner and a partial-confidence signal must outweigh
+  the always-full-strength same-type affinity before it changes any
+  clustering decision. Exp 49 built a REAL data-derived version -- a
+  synapse graph from actual SHD channel activity during target vs
+  distractor samples, wired through SpiNeCluster/SpiNePlacer into a new
+  disc-shaped 200-neuron substrate (10 cores on a ring, matching the
+  validated Exp 37b/37c scale) -- and its first (single-placement-seed)
+  pass appeared to REFUTE the cliff: 25% knowledge recovered 135% of the
+  gap, beating full knowledge outright. This is a worked example of the
+  audit discipline catching itself: Exp 49b (3 placement seeds) showed the
+  25% result was carried by one seed (+3512) against two unremarkable ones
+  (+633, +465) -- SpiNeCluster/SpiNePlacer are randomized heuristics, and
+  a single placement draw is not enough signal -- and declared the finding
+  INCONCLUSIVE rather than reporting it. Exp 49c (10 placement seeds, 240
+  runs, a 2-SE adjacent-point resolvability rule registered before
+  running) resolved it properly: 3 of 5 steps are real, 2 are noise --
+  small real gain 0->10%, a genuine flat plateau 10-50%, then the real
+  payoff at 50-75% and on to 100% (50% recovery not reached until 75%
+  knowledge, 90% not until 100%). Not an identical curve to the synthetic
+  version (a small early gain the uniform graph didn't show), but the
+  same practical conclusion: moderate, uncertain confidence in a future
+  association is close to useless to this mapper -- the benefit concentrates
+  in the high-confidence regime. All four experiments and the correction
+  narrative are in preprint Section 4.11, with a Limitations paragraph
+  on the untested edge-coverage model of partial knowledge and on this
+  thread's own near-miss as a demonstration of why placement-seed
+  averaging matters for anything built on SpiNeCluster/SpiNePlacer.
 - **Open, honestly-unresolved thread**: an "inverted-U" finding in
   Exp 35's timing-jitter sweep (moderate jitter beats both perfect
   synchrony and high jitter) survived three separate mechanism
