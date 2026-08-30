@@ -507,6 +507,65 @@ correct until checked.
   on the untested edge-coverage model of partial knowledge and on this
   thread's own near-miss as a demonstration of why placement-seed
   averaging matters for anything built on SpiNeCluster/SpiNePlacer.
+- **Shape-optimization thread (2026-08-29/30, same session, tinker_* scripts
+  in src/experiments/, not formal exp-numbered files -- exploratory/tinkering
+  grade throughout, reduced seed counts, no pre-registration): six
+  successive attempts to find a shape that beats isolated-blob topology,
+  converging on a clear, well-supported negative answer.** (1) Filament
+  tube thickness at matched coverage: real, roughly monotonic improvement
+  (-608 -> -203 as sigma 1.0->4.0) but plateaus far short of blob's +683
+  at the same coverage. (2) Fragmentation (splitting one connected
+  filament network into K disconnected pieces) at matched coverage AND
+  density: NOT monotonic (near-zero at K=1 and K=30, -415 at K=5) --
+  fragmentation alone doesn't help. (3) Applying blob's own trick --
+  discrete matched/mismatched component composition instead of continuous
+  probability blending -- to a K=30 fragmented filament: a real, large
+  jump to +271 (vs everything else tried), but still 2.50x below blob at
+  closely matched count/coverage (p=7.9e-7), converging with Exp 45c's
+  independently-derived 1.81x. (4) Dynamic self-organizing placement (a
+  capability that does not otherwise exist in this codebase -- confirmed
+  by grep, a stale checkpoint comment says "migration is a later port"
+  and nothing implements it): neurons start in a single mixed blob and
+  physically migrate toward the centroid of partners they've built real
+  learned value with, using the same V signal that already drives
+  synaptic rewiring. From a blob start: no effect (dynamic +1474 vs
+  static +1496 vs interleaved +1471) because a uniformly-mixed blob is
+  already interleaved-equivalent -- nothing needed fixing. From a
+  SEGREGATED start: migration barely moves the needle (-719 vs static
+  -726), diagnosing a chicken-and-egg problem -- V can only accrue from
+  pairs that have already co-fired LOCALLY (radius 5), the same locality
+  that makes segregated placement bad, so the migration signal is blind
+  to the problem it's meant to fix. (5) A wide (5x), decoupled "Sense"
+  correlation tracker used only for migration guidance: real but small
+  improvement (-649), nowhere close to rescue. (6) Simulated-annealing-
+  style exploration noise added on top of wide sensing, cooling across
+  the plastic phase: did NOT help (-707, statistically indistinguishable
+  from or slightly worse than no annealing) -- drift saturates at the
+  same ~9.6-unit equilibrium regardless, because the tether needed to
+  prevent unbounded drift erases exploratory progress before newly-
+  discovered correlation can compound into a self-sustaining pull.
+  **Final step**: a real systematic search, not more hand-picked probes --
+  18 shapes (K, local density, tube thickness) sampled and calibrated to
+  land within +/-0.06 of blob clumped30's coverage (0.417), fast-screened
+  then the top 5 refined at 8 seeds. RESULT: nothing beat blob. The best
+  searched shape (+282 +/- 29) lost to blob (+690 +/- 41, Welch p=2.9e-11)
+  by 2.4x DESPITE having 3.6x more raw count (22.6 vs 6.25) -- ruling out
+  "insufficient search" as the explanation. Isolated-clique (blob)
+  topology is the best of everything tested across this entire thread,
+  confirmed by both hand-designed and systematically-searched
+  alternatives. Motivated in conversation by an analogy to cortical
+  gyrification (folding packs more local surface area/redundancy into a
+  bounded volume than a smooth surface could) -- flagged in that same
+  conversation as a real but easily-overstated research area (lissencephaly
+  correlates strongly with impairment; folding-vs-IQ correlations within
+  the normal range are real but weak and contested), offered as motivation
+  for the search, not evidence for its result. NOT folded into the
+  preprint as a numbered section (tinkering-grade, not pre-registered);
+  strengthens the confidence behind Section 4.10's topology finding and
+  is referenced there. A rigorous, pre-registered version of the
+  fragmentation-plus-composition-trick result (item 3 above, the best
+  real lead from this thread) would be the natural next formal experiment
+  if this line is picked up again.
 - **Open, honestly-unresolved thread**: an "inverted-U" finding in
   Exp 35's timing-jitter sweep (moderate jitter beats both perfect
   synchrony and high jitter) survived three separate mechanism
