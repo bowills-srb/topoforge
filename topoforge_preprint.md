@@ -617,6 +617,22 @@ density tested but outperforms uniform interleaving on sparse
 fabrics, since it co-locates the populations that must associate
 rather than mixing all types indiscriminately.
 
+### 5.1 Practical recommendations for mapping tool design
+
+The results in Sections 4.1-4.11 support a concrete, actionable set of design rules for anyone building or configuring a mapper for plastic neuromorphic hardware, stated here as a synthesis rather than scattered across individual findings.
+
+**Optimize coverage first.** Whether every population has *at least one* reachable partner of its true associated type is the dominant lever — it accounts for the large majority of variance in learning outcome across every placement family we tested (Sections 4.7-4.8). A mapper with a limited constraint budget should spend it here before anywhere else.
+
+**Within a fixed coverage budget, prefer compact, isolated clusters over sparse connected structure.** Confirmed twice: once by a matched-count/coverage confirmatory test (Section 4.10, 1.81×) and independently by a systematic search over eighteen alternative shapes calibrated to the same coverage level, none of which closed the gap — including one candidate with 3.6× more raw local connectivity that still lost by 2.4×. Grouping correlated populations into self-contained clusters outperforms spreading them along a thinly-connected network, even at identical local-opportunity statistics.
+
+**Only use association foreknowledge when it is high-confidence.** Section 4.11 shows partial or uncertain knowledge of future associations is close to worthless to an association-aware mapper, replicated on both a synthetic and a real-data association graph. Below high confidence, default to coverage-maximizing interleaving rather than encoding an unreliable prior — the engineering cost of a soft-confidence mechanism is not repaid until confidence is close to certain.
+
+**Sparse long-range bridging is not a cheap substitute for real redundancy.** A small embedded-neuron budget does not deliver an outsized return; recovery of the placement penalty tracks the size of the budget roughly proportionally rather than paying off early (Section 4.10). A token long-range-connectivity gesture should not be expected to approximate the benefit of proper co-location.
+
+**Treat placement as a one-time, front-loaded decision.** We tested three physical self-organization mechanisms by which a substrate might, in principle, correct a poor initial placement on its own — value-driven migration, a wide independent sensing signal, and the same with simulated-annealing-style exploration — and none rescued a segregated starting configuration (Section 4.10 references this thread; full detail in the project's supplementary record). Structural (synaptic) plasticity is real and already does substantial work in this substrate, but physical placement is not something it repairs for you. A mapper's placement decision should be treated as final at map time, not deferred to runtime adaptation.
+
+**There is no material energy tradeoff to weigh against any of this.** The energy cost of the best-learning placements is at most 1.6%, and the association-aware condition is energy-neutral-to-better than every alternative tested (Section 4.9). An objection along the lines of "correct placement costs too much power" is not supported by anything measured in this paper.
+
 ---
 
 ## 6. Limitations
