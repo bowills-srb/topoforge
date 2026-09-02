@@ -20,17 +20,26 @@ wire-length-optimal blocks ("segregated" placement) produces a
 those populations, at *identical* energy cost during frozen operation
 (bit-identical, since the conditions differ only in which type sits at
 which position) and a 1.6% post-plasticity energy premium.
-We show this effect survives three independent stress tests: removal
+We show this effect survives five independent stress tests: removal
 of physical geometry entirely (the effect persists at 2.92x under
 pure graph-locality constraints, indicating the mechanism is local-
 versus-global connectivity rather than spatial embedding specifically);
 replication on a network sized to a published hardware architecture's
-own proportions; and, most consequentially, replication on real
+own proportions; replacement of our rewiring rule with a published
+homeostatic structural-plasticity model containing no correlation,
+value, or reward term, under which segregation suppresses cross-type
+connectivity to less than half the level a type-blind rule reaches by
+chance (0.367 against 0.813, chance ceiling 0.801; twelve seeds,
+Welch p = 2.5×10⁻³⁷); most consequentially, replication on real
 spike-encoded human speech (Spiking Heidelberg Digits), where an
 adjacency-matched, twelve-seed comparison shows a segregated-placement
 learning penalty of roughly 5.1x-8.2x depending on training-exposure
 regime (8.22x, 95% CI [7.03x, 10.05x], at the validated regime;
-Welch p = 3.5×10⁻¹⁴). The penalty is not confined to a
+Welch p = 3.5×10⁻¹⁴); and replication on a second speech corpus
+(Spiking Speech Commands) across three independent class pairs, at
+11.61x, 95% CI [9.33x, 14.99x] — an interval overlapping the Heidelberg
+result, and therefore evidence of the same effect at the same order of
+magnitude rather than of a larger one. The penalty is not confined to a
 baseline of our own construction: a from-scratch reimplementation of
 a published mapping tool (SpiNeMap), given the connectivity graph it
 actually has at map time — one that cannot contain associations
@@ -343,6 +352,8 @@ direct measurement). We report this honestly as solid, reproducible,
 and currently unexplained, rather than omit it or force a
 premature explanation.
 
+This test substitutes an externally measured timing curve while retaining our own candidate-selection and scoring machinery. Section 4.12 goes further, replacing the structural-plasticity rule in its entirety with a published model that contains no correlation, value, or reward term at all.
+
 ### 4.5 Generalization test 3: real spike-encoded speech data
 
 All results above use synthetic, hand-designed stimulus patterns on a
@@ -377,6 +388,8 @@ That range sits entirely *above* the 4.20x measured on synthetic data in Section
 **A comparison we previously drew, and now withdraw.** An earlier version of this section argued that sample diversity is not the driver of the effect, on the grounds that a four-samples-per-class configuration and a twenty-samples-per-class configuration produced statistically indistinguishable ratios (7.22x versus 7.25x). Those two figures no longer agree: regenerated under a deterministic tie-breaking rule (Section 3.4), the four-sample configuration gives 16.24x, 95% CI [11.70x, 26.26x], against the twenty-sample configuration's 8.22x [7.03x, 10.05x] — non-overlapping intervals. We do not read this as evidence that sample diversity *does* drive the effect. The four-sample configuration's segregated condition accumulates only 312 units of bridge mass, a quantity small enough that which connections it contains is substantially determined by tie-breaking rather than by learning, so its ratio does not reliably estimate anything. The earlier agreement at 7.22x/7.25x is better understood as two poorly-determined quantities happening to coincide than as a demonstration. The sample-diversity question is therefore open, and the twenty-sample, twelve-seed configuration — whose segregated condition accumulates 1135 units and is correspondingly better determined — is the one we report as the headline.
 
 We report one further caveat, revised from earlier drafts. Segregated-condition outcomes remain substantially more variable than interleaved ones in every regime (relative standard deviation 32.8% at the validated regime and 60.2% at the longer exposure, against 9.9% for interleaved in both). An earlier version additionally reported that two of twelve seeds in the longer-exposure regime produced bridge mass of essentially zero; on regeneration no seed does, the minimum being 274. The reliability difference between placements is real and we continue to report it — segregation makes learning outcomes less consistent, not merely smaller on average — but the specific claim of near-total failure in individual runs does not survive and is withdrawn.
+
+This section rests on a single corpus. Section 4.13 replicates it on a second, larger speech dataset across three independent class pairs, which is where the question of corpus-specificity is addressed.
 
 ### 4.6 Generalization test 4: a real mapping tool (SpiNeMap)
 
@@ -542,6 +555,51 @@ Sections 4.1-4.10 establish that placement matters and why. None of them establi
 
 **The practical upshot for tool builders**: a plasticity-aware mapper is not a cheap add-on that rewards partial profiling or soft priors over likely associations. It pays off when an engineer can declare associations with high confidence, and does close to nothing otherwise. This tempers Section 4.9's recommendation ("give the mapper the association structure") with a concrete requirement: the structure has to be known with confidence, not guessed at.
 
+### 4.12 Generalization test 5: a published structural-plasticity rule
+
+Section 4.4 substituted an externally measured *timing curve* for our own, but left the surrounding machinery intact: which candidate pairs were considered, and how they were scored, remained ours. Every number in this paper therefore still depended on one rewiring rule of our design — correlation, eligibility, and reward-attributed value accumulated on candidate pairs. This leaves a specific objection unanswered, and it is the growth-rule counterpart of the one Section 4.6 answered on the mapper side: is the penalty a fact about placement, or an artifact of how *our* rule chooses what to wire?
+
+To test this we replaced the rewiring rule entirely with the homeostatic structural-plasticity model of Butz and van Ooyen (2013), a published model of activity-dependent cortical rewiring. Each neuron maintains axonal and dendritic synaptic elements whose number is driven by a Gaussian growth curve of that neuron's *own* firing rate relative to a homeostatic target; synapses form by randomly pairing available elements, with pairing probability falling off as a Gaussian in inter-neuron distance. The rule contains no correlation term, no reward or value term, and no representation of neuron type. It cannot, even in principle, prefer a cross-type partner. The network starts from zero edges and wires itself over 780 steps.
+
+The comparison is structurally airtight in a way the earlier sections had to argue for rather than assert. Both conditions are generated from the same seeded construction, so they have *bit-identical coordinates* and identical per-type population counts (180 in each of five types); only which type occupies which fixed position differs. Every spatial quantity the rule can observe — inter-neuron distances, the pairing kernel, neighbourhood density — is therefore exactly equal across conditions, and the adjacency-mismatch failure mode documented in Section 4.5 is arithmetically impossible here rather than merely controlled for.
+
+**Table 10.** Connectivity grown from zero under the Butz–van Ooyen rule, mean ± s.d. over twelve seeds, N=900. The chance ceiling is the cross-type fraction a type-blind rule produces by construction: with 180 of each of five types, a random partner is cross-type with probability (900−180)/(900−1) = 0.801.
+
+| Condition | Final edges | Cross-type fraction | Taught pairs (0,3)+(1,4) |
+|---|---|---|---|
+| Segregated | 6581.3 | 0.367 ± 0.005 | 6.1 ± 5.0 |
+| Interleaved | 5134.2 | 0.813 ± 0.006 | 926.6 ± 52.9 |
+| *Type-blind chance ceiling* | — | *0.801* | — |
+
+On the pre-registered primary endpoint — cross-type fraction of grown edges — the conditions separate at Welch p = 2.5×10⁻³⁷ (d = 82.0; difference +0.446, bootstrap 95% CI [+0.442, +0.450]). The effect survives a rule that knows nothing about types, values, or rewards.
+
+**How this result should and should not be stated.** Interleaved's 0.813 sits *at* the type-blind chance ceiling of 0.801, not above it — and it cannot go above it, because a rule with no type-preference has no mechanism for exceeding chance. The ratio between conditions is therefore bounded near 2.2x by construction, however strong the underlying effect. The correct claim is the mirror image of the one a reader might expect: interleaving does not *enhance* cross-type wiring above chance; **segregation suppresses it to less than half of what a type-blind rule would produce by chance alone**, because same-type blocks dominate each neuron's spatial neighbourhood and the pairing kernel is local. We state this explicitly because the ratio invites the stronger and wrong reading.
+
+Two further properties of this result are worth reporting. First, on the secondary endpoint — mass on the specific association pairs the benchmark rewards elsewhere — the gap is 152.3x (p = 2.1×10⁻¹⁵); we report it as secondary rather than primary because scoring only those pairs would import our own pattern schedule into a test whose purpose is independence from our design choices. Second, an asymmetry we do not have an explanation for: the segregated condition consistently grows *more* total edges (6581 vs 5134, a factor of 1.28). This is normalized out of the fraction-based primary endpoint, and it runs *against* the raw-count secondary endpoint, making that figure conservative rather than inflated — but it is unexplained, and we flag it rather than pass over it.
+
+This test was pre-registered — endpoint, thresholds, and decision rule fixed before execution — and run on seeds disjoint from the exploratory pass that motivated it, which it reproduced closely (0.364→0.367 and 0.810→0.813). As with Section 4.7's confirmatory test, the predictions were derived from that exploratory pass and are not blind; the guarantee is that the endpoint and thresholds were committed before these particular seeds were run.
+
+### 4.13 Generalization test 6: a second real speech corpus
+
+Section 4.5 is the paper's most consequential result and rests on a single dataset. That leaves an obvious objection: the 5.1x–8.2x range may be a property of the Spiking Heidelberg Digits corpus specifically — its twenty digit classes, its speakers, its spike statistics — rather than of placement. We replicated the comparison on Spiking Speech Commands (SSC), the sibling corpus from the same release: thirty-five word classes rather than twenty digits, different speakers, the same underlying event-based encoding.
+
+The simulation physics is untouched — placement construction and the simulation loop are imported verbatim from the Section 4.5 experiment, at the same validated life-length and decay regime (V retention 0.651) — so any difference is attributable to the data. Two upgrades over a single-corpus check were registered in advance. First, sixteen seeds per cell, on a seed range disjoint from the exploratory pass. Second, and more importantly, **three disjoint class pairs** rather than one, which answers the immediate follow-on objection that a single corpus result might rest on one unusually separable pair of words. The registered criterion required *every* pair to clear both statistical significance and a substantive floor of 3.0x, set below the smallest ratio previously observed on real data.
+
+**Table 11.** Bridge mass by class pair on SSC, mean ± s.d. over sixteen seeds, adjacency-matched conditions.
+
+| Class pair | Segregated | Interleaved | Ratio | 95% CI | Welch p | d |
+|---|---|---|---|---|---|---|
+| 13 v 27 | 766.1 ± 627.2 | 7578.4 ± 871.4 | 9.89x | [6.99, 15.65] | 1.7×10⁻²⁰ | 8.97 |
+| 10 v 25 | 812.5 ± 500.7 | 8509.2 ± 1728.6 | 10.47x | [7.69, 15.34] | 2.3×10⁻¹² | 6.05 |
+| 12 v 5 | 500.9 ± 498.9 | 8049.0 ± 770.5 | 16.07x | [10.52, 27.95] | 1.6×10⁻²² | 11.63 |
+| **Aggregate** | 693.2 ± 551.6 | 8045.5 ± 1238.1 | **11.61x** | **[9.33, 14.99]** | — | — |
+
+All three pairs cleared the registered criterion, so the effect is not an artifact of one word pair.
+
+**The aggregate is not evidence of a larger effect.** SSC's aggregate interval [9.33, 14.99] overlaps SHD's [7.03, 10.05], so the honest reading is *the same effect at the same order of magnitude on a second corpus* — not that segregation costs more on SSC. We state this because the point estimate (11.61x against 8.22x) invites the stronger claim, and the intervals do not support it. Consistent with this, the pair most directly comparable to the exploratory pass reproduced it at 9.89x against 11.04x on disjoint seeds.
+
+Three caveats belong with this result. We used SSC's `valid` split rather than its canonical train/test split — a download-size decision, and a real deviation from the corpus's benchmark protocol, though one that does not threaten the internal validity of a comparison in which both conditions see identical stimuli. One of ninety-six cells (a segregated run in the 12 v 5 pair) returned exactly zero; V retention was inside the validated band, so this is a genuine failure to bridge rather than the decay artifact described in Section 4.5, but it inflates that pair. Excluding it, the pair gives 14.98x (p = 6.0×10⁻²¹) — still far above the registered floor, so the zero cell is not load-bearing. Finally, an interrupted first execution was resumed from a per-cell cache in which sixty-two of ninety-six cells carry values rounded to one decimal place; re-running a cached cell from scratch reproduced it to 0.03 against a rounding bound of 0.05, a relative error near 10⁻⁵ on quantities of this magnitude, which cannot move a ratio of 11.61x or a p-value of 10⁻²⁰.
+
 ---
 
 ## 5. Discussion
@@ -553,6 +611,12 @@ space, or just locality (4.3); does it depend on our specific
 learning rule (4.4); does it survive real data (4.5). The effect
 persists through all three, with the magnitude varying by test in
 ways we believe are individually explicable rather than arbitrary.
+Sections 4.12 and 4.13 extend the second and third of those tests to
+their stronger forms — replacing the structural-plasticity rule
+entirely with a published model rather than substituting one timing
+curve, and replicating on a second speech corpus across three
+independent class pairs rather than one — and the effect persists
+through both.
 Section 4.6 addresses a fourth objection of a different kind — not
 whether the effect is real but whether our segregated baseline
 represents a tool anyone deploys — by running SpiNeMap's actual
@@ -705,12 +769,12 @@ could use it as a constraint; it should
 not yet be used as a predictor of how much learning a given placement
 will cost.
 
-**Task and scale realism.** All synthetic results (Sections 4.1-4.4)
-use hand-designed stimulus patterns at N=900-5,000. Experiment 33's
-architecture proportions were drawn from a published hardware
-design, but its input remained synthetic. Only Section 4.5 uses real
-data, and at a substantially smaller scale (N=200) than the
-synthetic benchmarks.
+**Task and scale realism.** All synthetic results (Sections 4.1-4.4
+and 4.12) use hand-designed stimulus patterns at N=900-5,000.
+Experiment 33's architecture proportions were drawn from a published
+hardware design, but its input remained synthetic. Only Sections 4.5
+and 4.13 use real data, and at a substantially smaller scale (N=200)
+than the synthetic benchmarks.
 
 **Effect size interpretation.** As stated in Section 3.4, several
 reported effect sizes (Cohen's d > 70 in Section 4.1) are far larger
@@ -734,6 +798,8 @@ directly.
 
 **Real-data result variance and scope.** The Section 4.5 real-data result was strengthened after initial drafting: a twelve-seed, twenty-distinct-sample-per-class replication directly tested and rejected the concern that four examples per class was too narrow a sample — five-fold more distinct data produced a statistically indistinguishable ratio. The remaining open question is not sample size but training-exposure regime: reported magnitude ranges from 5.1x to 8.2x depending on how long the network is exposed before readout, and segregated-condition outcomes remain intrinsically high-variance (60-70% relative) even at n=12. We consider the direction of this result — segregation harms real-data learning, substantially and reliably — solidly established; the precise magnitude should still be read as regime-dependent rather than as a single fixed number.
 
+**The two newest generalization tests, and what they do not establish.** Section 4.12 replaces our rewiring rule with a published one, closing the growth-rule counterpart of the baseline-fidelity objection above — but three limits apply. Our reimplementation simplifies the published model: synaptic element budgets are recomputed per epoch rather than bound and unbound incrementally per element as in the original, and a single homeostatic target rate is calibrated once and shared across both conditions. The total-edge asymmetry (segregated grows 1.28x more edges) is normalized out of the primary endpoint and runs against the secondary, but it is uncharacterized and we do not know its cause. Most importantly, that test establishes that the *direction* of the effect is rule-independent; because the interleaved condition is pinned at the type-blind chance ceiling by construction, it cannot speak to whether the *magnitude* measured under our own rule is correct. Section 4.13's second-corpus replication used SSC's non-canonical `valid` split, tested three class pairs out of thirty-five available classes, and resumed an interrupted run from a partially rounded cache (quantified in that section). Both tests were pre-registered replications of exploratory passes rather than blind predictions: endpoints and thresholds were fixed before the reported seeds were run, but the expected direction was already known from the exploratory work, and both inherit the single-implementation caveat that applies to everything in this paper.
+
 **Section 4.10's three checks, individually.** The sparse-bridge result tested only individually-scattered embedded neurons; a structured bridging scheme was not tried, and we do not claim the naive version tested exhausts what "sparse long-range connectivity" could mean on this substrate. The connectivity-topology result's exploratory pass used approximately-matched count and coverage between filament and blob families and reported a magnitude (net-negative crossover) that the confirmatory pass, with tighter matching, did not reproduce; we report the confirmatory number (1.81x at matched coverage/count) as the trustworthy one and flag the larger exploratory number as superseded, not as an additional independent finding. Both the mechanism-validation and topology results are single-implementation findings at N=900 only, subject to the same independent-replication caveat as the rest of this paper.
 
 **Section 4.11's partial-knowledge model and its own near-miss.** Partial knowledge was operationalized as a continuous *weight* on the true cross-type affinity SpiNeCluster is given, not as certain knowledge of a *subset* of the true association edges — a mapper that is fully confident about a fraction of the true associations and blind to the rest was not tested, and could plausibly behave differently (closer to the synthetic "population" endpoint applied to a smaller effective graph than to a uniformly-diluted one). The real-data version of this section also stands as a within-paper demonstration of the risk it warns about elsewhere: an initial single-placement-seed run appeared to overturn the synthetic threshold finding outright, and only a second, then third, more heavily-seeded rerun showed that result was placement-search noise, not a real effect. We report the corrected result and the process by which it was reached rather than only the final number, since the intermediate false positive is itself informative about how much placement-seed averaging this class of experiment needs before a result should be trusted.
@@ -745,9 +811,11 @@ directly.
 Placement determines learnability on plastic neuromorphic hardware,
 not merely communication energy. This effect is robust to removing
 physical geometry entirely, to substituting an externally measured
-learning rule for our own, and — with important caveats disclosed
-above — to replacing synthetic stimulus patterns with real human
-speech. We believe this constitutes a genuine, previously
+learning rule for our own, to replacing our structural-plasticity rule
+outright with a published model containing no correlation, value, or
+reward term, and — with important caveats disclosed above — to
+replacing synthetic stimulus patterns with real human speech, on two
+independent speech corpora. We believe this constitutes a genuine, previously
 unaddressed design variable for neuromorphic hardware mapping, and we
 report both the strength of the evidence for it and the specific
 respects in which further validation, particularly independent
@@ -779,6 +847,16 @@ the finding should be considered fully established.
 
 5. [NEUTRAMS citation — carried from prior draft; verify exact
    venue/year before submission.]
+
+6. Butz, M., van Ooyen, A. "A simple rule for dendritic spine and
+   axonal bouton formation can account for cortical reorganization
+   after focal retinal lesions." *PLoS Computational Biology* 9(10):
+   e1003259 (2013). [Model reimplemented in Section 4.12 — verify
+   exact volume/article number against the original before
+   submission.]
+
+7. Cramer et al. (2022), reference 1 above, also releases the Spiking
+   Speech Commands (SSC) corpus used in Section 4.13.
 
 *Note: this reference list is incomplete relative to the full related-
 work discussion in Section 2. Citations for the cognitive-science
