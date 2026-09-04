@@ -16,7 +16,8 @@ also determines *what the network can learn*, independent of its
 effect on energy. Across simulated substrates from N=900 to N=5,000,
 placing functionally distinct neuron populations in contiguous,
 wire-length-optimal blocks ("segregated" placement) produces a
-3.8-4.2x learning penalty relative to placement that interleaves
+3.83x learning penalty (95% CI [3.67x, 3.98x]) relative to placement
+that interleaves
 those populations, at *identical* energy cost during frozen operation
 (bit-identical, since the conditions differ only in which type sits at
 which position) and a 1.6% post-plasticity energy premium.
@@ -33,13 +34,22 @@ chance (0.367 against 0.813, chance ceiling 0.801; twelve seeds,
 Welch p = 2.5×10⁻³⁷); most consequentially, replication on real
 spike-encoded human speech (Spiking Heidelberg Digits), where an
 adjacency-matched, twelve-seed comparison shows a segregated-placement
-learning penalty of roughly 5.1x-8.2x depending on training-exposure
-regime (8.22x, 95% CI [7.03x, 10.05x], at the validated regime;
-Welch p = 3.5×10⁻¹⁴); and replication on a second speech corpus
+learning penalty of 2.74x, 95% CI [2.27x, 3.41x], Welch
+p = 9.8×10⁻¹¹; and replication on a second speech corpus
 (Spiking Speech Commands) across three independent class pairs, at
-11.61x, 95% CI [9.33x, 14.99x] — an interval overlapping the Heidelberg
-result, and therefore evidence of the same effect at the same order of
-magnitude rather than of a larger one. The penalty is not confined to a
+2.89x, 95% CI [2.36x, 3.50x] — an interval closely overlapping the
+Heidelberg result, and therefore evidence of the same effect at the
+same magnitude on an independent corpus. The real-data figures are
+corrected values: earlier drafts reported 8.22x and 11.61x, inflated
+roughly threefold by an initial wiring draw that was pinned across
+seeds, and those figures are withdrawn (Section 4.5). The effect
+survives the correction at reduced magnitude; the synthetic result is
+substantively unchanged, though its published error bars were not.
+Segregation's cost is also measured directly in task terms rather than
+only structurally: on held-out speech samples the plastic phase never
+saw, and at matched pre-learning decodability, segregated placement
+costs 6.94 percentage points of classification accuracy
+(p = 0.012, n = 40). The penalty is not confined to a
 baseline of our own construction: a from-scratch reimplementation of
 a published mapping tool (SpiNeMap), given the connectivity graph it
 actually has at map time — one that cannot contain associations
@@ -259,6 +269,36 @@ Cohen's d values reflect the low noise of a fully controlled
 simulation and should not be read as a prediction of effect
 magnitude on physical hardware.
 
+**Precision correction (2026-09-04, wiring-draw audit).** The synthetic
+*ratio* above survives the pinned-draw defect described in Section 4.5;
+its *error bars* do not. This harness contains the same fixed
+`default_rng(7)` initial wiring, so the ten seeds reported above reuse
+one wiring draw and their standard deviations contain no wiring
+variance — the structural audit shows initial taught mass of
+1430.0 ± 0.0 against 1488.0 ± 0.0, and excitatory counts of 1136.0 ± 0.0
+against 1223.0 ± 0.0, a 7.66% pre-learning advantage to interleaved with
+zero variance. Re-running with wiring resampled per seed over logical
+identities (twenty seeds, equivalence to the original verified
+bit-identically in legacy mode) gives **3.83x, 95% CI [3.67x, 3.98x],
+p = 3.4×10⁻¹⁹, d = 11.43** — only 9.3% below the pinned 4.20x, and the
+growth sign flip that is this section's corrected primary result is
+fully preserved (segregated −722.1 ± 21.3, interleaved +1337.5 ± 253.3).
+What must be revised is the reported precision: the pinned interval is
+0.05x wide against a true 0.32x, and the interleaved standard deviation
+was understated roughly sixfold. **The number stands; the error bars
+were fiction.**
+
+Why this section survives where Section 4.5 did not is mechanistic and
+was predicted before the audit ran: here the segregated condition has
+*zero* adjacency on the measured association pairs, a fact of geometry
+that no wiring draw can rescue, so its growth barely moves
+(−727.1 → −722.1). On the real-data harness the segregated condition had
+adjacency to lose, and an unlucky draw suppressed it roughly threefold.
+Every experiment importing this harness — Sections 4.7 through 4.11 and
+the topology work of Section 4.10 — inherits understated variance rather
+than shifted point estimates, and their intervals should be read as
+correspondingly optimistic pending re-derivation.
+
 **Metric correction (2026-08-29, adversarial audit).** The score above
 is a raw count of edges landing on the associated cluster-type pair.
 The benchmark's *initial* edge set, however, is drawn uniformly at
@@ -387,13 +427,21 @@ so an initial large ratio (over 1,000x) reflected mismatched
 opportunity rather than a difference in learning arising from
 arrangement alone.
 
-Correcting both issues — matching the decay rate to the life length, and placing both conditions in matched geometry (same disc, same neuron density, differing only in whether functional types occupy contiguous wedges or are shuffled) — yields an adjacency-matched comparison. At the validated life-length/decay regime (approximately 8,600 steps, V retention 0.651), segregated placement produces a mean bridge mass of 1135 ± 373 across twelve seeds; interleaved placement produces 9329 ± 919. Ratio: 8.22x, bootstrap 95% CI [7.03x, 10.05x]. Welch's t-test: p = 3.5×10⁻¹⁴; a non-parametric Wilcoxon signed-rank test, which does not assume normality, independently confirms significance (p = 4.9×10⁻⁴); Cohen's d = 11.68.
+Correcting both issues — matching the decay rate to the life length, and placing both conditions in matched geometry (same disc, same neuron density, differing only in whether functional types occupy contiguous wedges or are shuffled) — yields an adjacency-matched comparison at the validated life-length/decay regime (approximately 8,600 steps, V retention 0.651).
 
-The magnitude depends on the training-exposure regime. Extending exposure to two epochs (approximately 17,200 steps, V retention 0.42) reduces the ratio to 5.09x, 95% CI [3.93x, 7.27x], still overwhelmingly significant (Welch p = 2.1×10⁻¹⁴, Wilcoxon p = 4.9×10⁻⁴, d = 7.37). We report both regimes rather than selecting one: the honest range for this effect on real speech data is approximately 5.1x to 8.2x depending on training exposure.
+**Correction (2026-09-04): this section's headline was inflated roughly threefold by a pinned random draw, and the corrected value is 2.74x.** An earlier version of this paper reported 8.22x, 95% CI [7.03x, 10.05x], across twelve seeds. That number is withdrawn. The cause is stated in full because it is instructive, and because it defeated every check we had.
 
-That range sits entirely *above* the 4.20x measured on synthetic data in Section 4.1, rather than bracketing it as an earlier version of this paper reported. We do not have a confident account of why real speech should produce a larger placement penalty than hand-designed patterns, and we decline to construct one after the fact; we note only that the two are measured on different tasks at different scales (N=200 versus N=900) and that the direction of the difference is the opposite of what a "synthetic patterns exaggerate the effect" objection would predict.
+The simulation harness drew its initial connectivity *and* its excitatory/inhibitory assignment from a fixed generator, `default_rng(7)`, independent of the per-run seed. Two things followed. First, every "seed" in every real-data experiment reused **the same initial wiring**, so the across-seed standard deviations and bootstrap intervals we reported contained no wiring-draw variance whatsoever — the structural audit shows excitatory input→output counts of 313.0 ± 0.0 against 341.0 ± 0.0, an 8.95% pre-learning advantage to interleaved with *literally zero* variance. Second, the wiring indices referred to global neuron identity while the placement determines which identity holds which type, so the two conditions did not receive the same logical network.
 
-**A comparison we previously drew, and now withdraw.** An earlier version of this section argued that sample diversity is not the driver of the effect, on the grounds that a four-samples-per-class configuration and a twenty-samples-per-class configuration produced statistically indistinguishable ratios (7.22x versus 7.25x). Those two figures no longer agree: regenerated under a deterministic tie-breaking rule (Section 3.4), the four-sample configuration gives 16.24x, 95% CI [11.70x, 26.26x], against the twenty-sample configuration's 8.22x [7.03x, 10.05x] — non-overlapping intervals. We do not read this as evidence that sample diversity *does* drive the effect. The four-sample configuration's segregated condition accumulates only 312 units of bridge mass, a quantity small enough that which connections it contains is substantially determined by tie-breaking rather than by learning, so its ratio does not reliably estimate anything. The earlier agreement at 7.22x/7.25x is better understood as two poorly-determined quantities happening to coincide than as a demonstration. The sample-diversity question is therefore open, and the twenty-sample, twelve-seed configuration — whose segregated condition accumulates 1135 units and is correspondingly better determined — is the one we report as the headline.
+Re-running with the wiring resampled per seed, and drawn over logical identities so both conditions receive an identical network, gives **2.74x, bootstrap 95% CI [2.27x, 3.41x], Welch p = 9.8×10⁻¹¹, Cohen's d = 2.85** across twenty seeds. Segregated bridge mass is 2941.5 ± 1548.1; interleaved is 8045.6 ± 2003.4. Decomposing the change, un-pinning the draw accounts for essentially all of it and the logical-connectivity asymmetry for almost none: resampling raises the *segregated* condition roughly threefold (1011 → 2942) while interleaved barely moves (−11%). `default_rng(7)` was simply an unusually unfavourable draw for the segregated condition specifically. The withdrawn and corrected intervals do not overlap. An equivalence check confirms the corrected harness reproduces the original bit-identically when run in legacy mode, so the physics is unchanged and only the draw differs.
+
+Two features of this failure are worth recording. The corrected interval is **narrower** than the withdrawn one, not wider — so the published interval was not merely overconfident, it was centred on the wrong value while looking well determined, which is why seed sweeps never flagged it. And the defect's severity depends on whether geometry leaves room for it: the synthetic benchmark of Section 4.1, audited identically, barely moved (Section 4.1's correction note), because there the segregated condition has *zero* adjacency on the measured pairs and no wiring draw can rescue what geometry forbids.
+
+**A regime comparison we now withdraw.** An earlier version reported that extending exposure to two epochs reduced the ratio to 5.09x, and presented "approximately 5.1x to 8.2x depending on training exposure" as the honest range for real speech data. Both figures were measured under the pinned draw. The longer-exposure regime has **not** been re-run under corrected wiring, so we withdraw the range rather than restate it, and report only the corrected validated-regime figure of 2.74x. Whether the effect still varies with training exposure is now an open question.
+
+The corrected value no longer sits above the synthetic result. At 2.74x [2.27, 3.41] against the synthetic 3.83x [3.67, 3.98] (Section 4.1, corrected), real speech data now shows a *somewhat smaller* penalty than hand-designed patterns — the opposite direction to what the withdrawn numbers suggested. We decline to construct a post-hoc account of why, noting only that the two are measured on different tasks at different scales (N=200 versus N=900), and that the earlier puzzle we reported here — why real speech should exceed synthetic — dissolves along with the numbers that produced it.
+
+**A comparison we previously drew, and now withdraw.** An earlier version of this section argued that sample diversity is not the driver of the effect, on the grounds that a four-samples-per-class configuration and a twenty-samples-per-class configuration produced statistically indistinguishable ratios (7.22x versus 7.25x). Those two figures no longer agree: regenerated under a deterministic tie-breaking rule (Section 3.4), the four-sample configuration gives 16.24x, 95% CI [11.70x, 26.26x], against the twenty-sample configuration's 8.22x [7.03x, 10.05x] — non-overlapping intervals. We do not read this as evidence that sample diversity *does* drive the effect. The four-sample configuration's segregated condition accumulates only 312 units of bridge mass, a quantity small enough that which connections it contains is substantially determined by tie-breaking rather than by learning, so its ratio does not reliably estimate anything. The earlier agreement at 7.22x/7.25x is better understood as two poorly-determined quantities happening to coincide than as a demonstration. The sample-diversity question is therefore open, and the twenty-sample configuration — whose segregated condition is correspondingly better determined — is the one we report as the headline. *(All figures in this paragraph, including the 8.22x and the 16.24x, were measured under the pinned wiring draw corrected above and are retained only to document the withdrawn comparison. Neither has been re-derived under corrected wiring, and neither should be cited as a current result.)*
 
 We report one further caveat, revised from earlier drafts. Segregated-condition outcomes remain substantially more variable than interleaved ones in every regime (relative standard deviation 32.8% at the validated regime and 60.2% at the longer exposure, against 9.9% for interleaved in both). An earlier version additionally reported that two of twelve seeds in the longer-exposure regime produced bridge mass of essentially zero; on regeneration no seed does, the minimum being 274. The reliability difference between placements is real and we continue to report it — segregation makes learning outcomes less consistent, not merely smaller on average — but the specific claim of near-total failure in individual runs does not survive and is withdrawn.
 
@@ -589,24 +637,28 @@ This test was pre-registered — endpoint, thresholds, and decision rule fixed b
 
 ### 4.13 Generalization test 6: a second real speech corpus
 
-Section 4.5 is the paper's most consequential result and rests on a single dataset. That leaves an obvious objection: the 5.1x–8.2x range may be a property of the Spiking Heidelberg Digits corpus specifically — its twenty digit classes, its speakers, its spike statistics — rather than of placement. We replicated the comparison on Spiking Speech Commands (SSC), the sibling corpus from the same release: thirty-five word classes rather than twenty digits, different speakers, the same underlying event-based encoding.
+Section 4.5 is the paper's most consequential result and rests on a single dataset. That leaves an obvious objection: the measured penalty may be a property of the Spiking Heidelberg Digits corpus specifically — its twenty digit classes, its speakers, its spike statistics — rather than of placement. We replicated the comparison on Spiking Speech Commands (SSC), the sibling corpus from the same release: thirty-five word classes rather than twenty digits, different speakers, the same underlying event-based encoding.
 
-The simulation physics is untouched — placement construction and the simulation loop are imported verbatim from the Section 4.5 experiment, at the same validated life-length and decay regime (V retention 0.651) — so any difference is attributable to the data. Two upgrades over a single-corpus check were registered in advance. First, sixteen seeds per cell, on a seed range disjoint from the exploratory pass. Second, and more importantly, **three disjoint class pairs** rather than one, which answers the immediate follow-on objection that a single corpus result might rest on one unusually separable pair of words. The registered criterion required *every* pair to clear both statistical significance and a substantive floor of 3.0x, set below the smallest ratio previously observed on real data.
+The simulation physics is untouched — placement construction and the simulation loop are imported verbatim from the Section 4.5 experiment, at the same validated life-length and decay regime (V retention 0.651) — so any difference is attributable to the data. Two upgrades over a single-corpus check were registered in advance. First, sixteen seeds per cell, on a seed range disjoint from the exploratory pass. Second, and more importantly, **three disjoint class pairs** rather than one, which answers the immediate follow-on objection that a single corpus result might rest on one unusually separable pair of words. The registered criterion required *every* pair to clear both statistical significance and a substantive floor of 3.0x.
 
-**Table 11.** Bridge mass by class pair on SSC, mean ± s.d. over sixteen seeds, adjacency-matched conditions.
+**These numbers were re-derived after the wiring-draw correction of Section 4.5**, which applies here identically: this experiment imports the same simulation loop, and its structural audit shows the same pinned 313.0 ± 0.0 against 341.0 ± 0.0 excitatory imbalance. The values below are the corrected ones, from wiring resampled per seed in logical space. The withdrawn pre-correction figures were 9.89x, 10.47x and 16.07x, aggregate 11.61x [9.33, 14.99].
+
+**Table 11.** Bridge mass by class pair on SSC, mean over sixteen seeds, adjacency-matched conditions, corrected wiring.
 
 | Class pair | Segregated | Interleaved | Ratio | 95% CI | Welch p | d |
 |---|---|---|---|---|---|---|
-| 13 v 27 | 766.1 ± 627.2 | 7578.4 ± 871.4 | 9.89x | [6.99, 15.65] | 1.7×10⁻²⁰ | 8.97 |
-| 10 v 25 | 812.5 ± 500.7 | 8509.2 ± 1728.6 | 10.47x | [7.69, 15.34] | 2.3×10⁻¹² | 6.05 |
-| 12 v 5 | 500.9 ± 498.9 | 8049.0 ± 770.5 | 16.07x | [10.52, 27.95] | 1.6×10⁻²² | 11.63 |
-| **Aggregate** | 693.2 ± 551.6 | 8045.5 ± 1238.1 | **11.61x** | **[9.33, 14.99]** | — | — |
+| 13 v 27 | 2235.0 | 6872.3 | 3.07x | [2.31, 4.26] | 7.1×10⁻⁹ | 2.89 |
+| 10 v 25 | 2613.2 | 7326.8 | 2.80x | [1.82, 4.18] | 1.3×10⁻⁵ | 1.86 |
+| 12 v 5 | 2209.6 | 6166.2 | 2.79x | [2.28, 3.54] | 2.2×10⁻⁸ | 2.80 |
+| **Aggregate** | 2352.6 | 6788.4 | **2.89x** | **[2.36, 3.50]** | 6.4×10⁻¹⁹ | 2.32 |
 
-All three pairs cleared the registered criterion, so the effect is not an artifact of one word pair.
+**Only one of three pairs now clears the pre-registered 3.0x floor**, and we report that plainly rather than re-baselining it. The 13 v 27 pair passes at 3.07x; 10 v 25 (2.80x) and 12 v 5 (2.79x) fall below. By the decision rule registered before this experiment ran, one pass in three scores as *refuted as a general SSC result*, and on the letter of that rule the "not a lucky word pair" conclusion is not established.
 
-**The aggregate is not evidence of a larger effect.** SSC's aggregate interval [9.33, 14.99] overlaps SHD's [7.03, 10.05], so the honest reading is *the same effect at the same order of magnitude on a second corpus* — not that segregation costs more on SSC. We state this because the point estimate (11.61x against 8.22x) invites the stronger claim, and the intervals do not support it. Consistent with this, the pair most directly comparable to the exploratory pass reproduced it at 9.89x against 11.04x on disjoint seeds.
+Two considerations argue against reading that as a substantive refutation, and we state them without pretending they nullify the registered rule. All three pairs remain highly significant (p ≤ 1.3×10⁻⁵) with large effect sizes, so the *effect* is present in every pair; what fails is a magnitude threshold, not a direction. And the 3.0x floor was itself derived from the pre-correction SHD range — a number the same defect inflated — so the bar was set with contaminated values. Measured against the corrected SHD benchmark of 2.74x, all three pairs sit at or above the first corpus. A reader who holds us to the registered rule as written should conclude the pair-generality claim is unproven; a reader who accepts that the threshold was miscalibrated by a defect discovered later should conclude the effect replicates consistently across pairs at a lower magnitude. We think the second is correct and the first is defensible, and we decline to hide the tension.
 
-Three caveats belong with this result. We used SSC's `valid` split rather than its canonical train/test split — a download-size decision, and a real deviation from the corpus's benchmark protocol, though one that does not threaten the internal validity of a comparison in which both conditions see identical stimuli. One of ninety-six cells (a segregated run in the 12 v 5 pair) returned exactly zero; V retention was inside the validated band, so this is a genuine failure to bridge rather than the decay artifact described in Section 4.5, but it inflates that pair. Excluding it, the pair gives 14.98x (p = 6.0×10⁻²¹) — still far above the registered floor, so the zero cell is not load-bearing. Finally, an interrupted first execution was resumed from a per-cell cache in which sixty-two of ninety-six cells carry values rounded to one decimal place; re-running a cached cell from scratch reproduced it to 0.03 against a rounding bound of 0.05, a relative error near 10⁻⁵ on quantities of this magnitude, which cannot move a ratio of 11.61x or a p-value of 10⁻²⁰.
+**Cross-corpus agreement is now stronger, not weaker.** The corrected SSC aggregate [2.36, 3.50] overlaps the corrected SHD interval [2.27, 3.41] closely — 2.89x against 2.74x. Before correction the two corpora differed substantially in point estimate (11.61x against 8.22x) and the overlap claim rested on wide intervals; after correction they nearly coincide. The conclusion the section was written to support — the same effect at the same order of magnitude on a second corpus — survives the correction and is better supported by the corrected numbers than by the withdrawn ones.
+
+Two caveats remain from the original design. We used SSC's `valid` split rather than its canonical train/test split — a download-size decision, and a real deviation from the corpus's benchmark protocol, though one that does not threaten the internal validity of a comparison in which both conditions see identical stimuli. And three class pairs out of thirty-five available classes is a small sample of the corpus. *(The zero-valued cell and the rounded-cache caveat reported in an earlier version applied to the withdrawn pinned-wiring run; the corrected run was cached at full float precision and contains no zero-valued cells.)*
 
 ### 4.14 A third-party boundary condition: where the penalty does *not* appear
 
@@ -637,6 +689,25 @@ Blocked, interleaved and random placements sit within 0.2 cores of each other at
 **What this does and does not say.** It would be a serious misreading to take this as "placement does not matter on real hardware." The correct reading is the opposite in emphasis, and it is the collaborator's own: a backpropagation-trained recurrent network, even stripped to a thousandth of its weights, carries **no community structure for a placement to exploit**. Sparsity alone does not create locality. The placement penalty requires connectivity in which locality is already present — which a local structural-growth rule produces as a matter of course, and which magnitude pruning of a densely trained network does not produce at any sparsity level tested.
 
 This sharpens the scope of the paper's claim in a way we could not have established from our own simulations, and it answers a reviewer's most natural objection — that the effect is simply what any sparse network exhibits — with third-party measurement on hardware rather than with argument. It also bears directly on the baseline-fidelity question of Section 4.6: our segregated condition is a fair baseline on a plastic substrate and would be a strawman on a trained-and-pruned one. The two claims are consistent, and the distinguishing variable is the same one Section 4.6 identified — the structure of the connectivity graph, not the optimizer or the hardware.
+
+### 4.15 The endpoint this paper is named for: classification accuracy
+
+Every result above is structural. Taught mass, bridge mass and cross-type edge fraction all measure what the network *wired*, not what it can *do*. This paper is titled for learnability, and the step from "less associative structure forms" to "the network learns less" was, until this section, an inference rather than a measurement. A reader is entitled to ask for the measurement, and we had not made it.
+
+**Design, registered in advance.** The readout is the crux, because it can be rigged in either direction: a decoder allowed to read input-type neurons classifies the stimulus directly and would return a null regardless of placement, while a decoder reading only the specific association pairs the plasticity rule targets would assume the conclusion. We registered the readout as the per-neuron spike counts of the sixty **output-type** neurons only, decoded by a closed-form ridge classifier with a fixed regularisation constant, no per-condition tuning, z-scored on training-fold statistics alone, evaluated by stratified cross-validation on **held-out samples the plastic phase never saw**. Each placement is run twice, with plasticity active and frozen, so the primary quantity is the accuracy that plasticity *adds* rather than what was already decodable from the stimulus.
+
+**A confound found by the manipulation check, and the harness defect it exposed.** The first execution failed its own pre-registered P1: frozen accuracies differed by 5.97 percentage points against a 5.0 point tolerance, meaning the conditions were unequal *before any learning*. Input→output edge counts matched (419 against 418) but excitatory counts did not (313 against 341). Two candidate fixes were tried and the check rejected both. The third succeeded, and identified the deeper problem: drawing wiring and inhibition over **logical** identities — (type, within-type rank) — and mapping through each placement, rather than over global neuron indices. That fix is what later exposed the pinned-draw defect corrected in Sections 4.1 and 4.5, so this experiment's manipulation check is the reason the rest of this paper's real-data numbers are now right.
+
+**Table 13.** Held-out classification accuracy, forty seeds per condition, corrected wiring. Chance is 50%.
+
+| Placement | Plastic | Frozen | Plasticity-attributable gain |
+|---|---|---|---|
+| Segregated | 81.25 ± 12.16 | 56.96 ± 5.81 | **+24.29 ± 14.45** |
+| Interleaved | 87.69 ± 6.93 | 56.46 ± 5.06 | **+31.23 ± 9.07** |
+
+Pre-learning decodability is now matched to 0.50 points. The plasticity-attributable gain differs by **6.94 percentage points, Welch p = 0.0124**, at a sample size chosen by a power calculation from the failed run's observed variance. Plasticity buys a large accuracy gain in *both* conditions, confirming the harness genuinely learns and the readout is sensitive; segregation reduces that gain.
+
+**What this establishes, stated at its true size.** Segregated placement does cost held-out classification accuracy, on data never seen during learning, at matched pre-learning decodability. The paper's central inference is now measured rather than assumed. But it should be stated quantitatively rather than leaned on rhetorically. Cohen's d is 0.57 — moderate, against effect sizes above 8 elsewhere in this paper. Observed variance exceeded the planning assumption, so achieved power fell below target and the magnitude estimate is imprecise. Most importantly, on these same runs the *structural* ratio is 3.59x while the *accuracy* ratio is 1.079x. The structural penalty is large; the accuracy penalty is real, directionally consistent, and much smaller in relative terms. "Placement determines learnability" is earned as a directional claim about a measurable cost. It is not earned as a claim that the large structural gap translates into a comparably large accuracy gap, and we do not make that claim.
 
 ---
 
@@ -852,7 +923,9 @@ mechanism channels identified in Section 4.10 — so a smaller effect
 than our simulations report is the correct prediction there, and we
 register it as such rather than retrofit an explanation afterwards.
 
-**Real-data result variance and scope.** The Section 4.5 real-data result was strengthened after initial drafting: a twelve-seed, twenty-distinct-sample-per-class replication directly tested and rejected the concern that four examples per class was too narrow a sample — five-fold more distinct data produced a statistically indistinguishable ratio. The remaining open question is not sample size but training-exposure regime: reported magnitude ranges from 5.1x to 8.2x depending on how long the network is exposed before readout, and segregated-condition outcomes remain intrinsically high-variance (60-70% relative) even at n=12. We consider the direction of this result — segregation harms real-data learning, substantially and reliably — solidly established; the precise magnitude should still be read as regime-dependent rather than as a single fixed number.
+**The pinned-wiring defect, and what it says about the rest of this paper.** The correction in Sections 4.1 and 4.5 is the most serious error found in this work, and its character matters more than its magnitude. A single generator, `default_rng(7)`, supplied initial connectivity and excitatory/inhibitory assignment for every run of every real-data experiment, independent of the per-run seed. Multi-seed sweeps therefore resampled the *simulation* while holding the *network* fixed, and reported intervals that quantified only the former. The defect was invisible to every check we had: results were reproducible, seed-stable, survived a numpy-version audit, and passed the deployed-code audit — because all of those verify consistency, and the numbers were perfectly consistent. They were consistently wrong. The corrected interval is narrower than the withdrawn one, so nothing about the published statistics looked suspicious; the estimate was simply centred on the wrong value. We record this because the lesson generalises beyond this paper: reproducibility checks cannot detect a variance source that is held constant, and an interval that never varies a factor is not an interval over that factor. Readers should treat every interval in this paper as conditional on the factors actually resampled, and the experiments importing the synthetic harness (Sections 4.7-4.11) as carrying optimistic error bars pending re-derivation, though their point estimates are unaffected.
+
+**Real-data result variance and scope.** Segregated-condition outcomes remain intrinsically high-variance (relative standard deviation above 50%) even at twenty seeds, and that variance is now larger, not smaller, than earlier drafts reported, because resampling the wiring restored a source of variation the pinned draw had suppressed. The training-exposure question raised in earlier drafts is now open rather than answered: the longer-exposure regime was measured only under the pinned draw and has been withdrawn rather than re-derived, so we do not currently know whether the effect's magnitude varies with exposure. We consider the *direction* of the real-data result — segregation harms learning on real speech, substantially and reliably, across two corpora and now in classification accuracy as well as structure — solidly established. The magnitude should be read as approximately 2.7x-2.9x at the one regime that has been properly measured, not as a range.
 
 **The two newest generalization tests, and what they do not establish.** Section 4.12 replaces our rewiring rule with a published one, closing the growth-rule counterpart of the baseline-fidelity objection above — but three limits apply. Our reimplementation simplifies the published model: synaptic element budgets are recomputed per epoch rather than bound and unbound incrementally per element as in the original, and a single homeostatic target rate is calibrated once and shared across both conditions. The total-edge asymmetry (segregated grows 1.28x more edges) is normalized out of the primary endpoint and runs against the secondary, but it is uncharacterized and we do not know its cause. Most importantly, that test establishes that the *direction* of the effect is rule-independent; because the interleaved condition is pinned at the type-blind chance ceiling by construction, it cannot speak to whether the *magnitude* measured under our own rule is correct. Section 4.13's second-corpus replication used SSC's non-canonical `valid` split, tested three class pairs out of thirty-five available classes, and resumed an interrupted run from a partially rounded cache (quantified in that section). Both tests were pre-registered replications of exploratory passes rather than blind predictions: endpoints and thresholds were fixed before the reported seeds were run, but the expected direction was already known from the exploratory work, and both inherit the single-implementation caveat that applies to everything in this paper.
 
@@ -871,7 +944,19 @@ learning rule for our own, to replacing our structural-plasticity rule
 outright with a published model containing no correlation, value, or
 reward term, and — with important caveats disclosed above — to
 replacing synthetic stimulus patterns with real human speech, on two
-independent speech corpora. We believe this constitutes a genuine, previously
+independent speech corpora. It is measurable not only in connectivity
+but in task performance: segregated placement costs held-out
+classification accuracy at matched pre-learning decodability
+(Section 4.15). Its magnitude is smaller than earlier drafts of this
+paper claimed — a pinned random draw inflated the real-data figures
+roughly threefold, and the corrected values are reported throughout —
+and a third-party measurement on physical hardware (Section 4.14)
+bounds where it applies at all: the penalty requires connectivity that
+already carries locality, and is absent in a trained-and-pruned network
+that has none. What survives correction is a directional effect that is
+large, consistent across rules and corpora, mechanistically explained,
+and reproduced by a real deployed mapping tool.
+We believe this constitutes a genuine, previously
 unaddressed design variable for neuromorphic hardware mapping, and we
 report both the strength of the evidence for it and the specific
 respects in which further validation, particularly independent
