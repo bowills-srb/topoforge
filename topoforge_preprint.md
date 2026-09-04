@@ -53,7 +53,15 @@ wire-length optimization as such. Sweeping the fabric's core pitch
 against the plasticity radius shows the penalty saturating to its full
 magnitude beyond a pitch of roughly 1.5 radii, while an
 association-aware mapper is unharmed at every density tested and, on
-sparse fabrics, outperforms uniform interleaving by 1.43x. We report effect
+sparse fabrics, outperforms uniform interleaving by 1.43x.
+An independent third-party measurement on physical hardware (Catalyst
+Neuromorphic N4, Section 4.14) bounds the claim's scope from the other
+side: on a backpropagation-trained recurrent network pruned to as
+little as 0.1% of its weights, segregated, interleaved and random
+placements are indistinguishable in routed traffic at every sparsity
+level. Sparsity alone does not create the locality the effect requires;
+the penalty applies to connectivity built by local structural growth,
+not to any sparse network. We report effect
 sizes, statistical tests,
 and — in a dedicated Limitations section — the specific respects in
 which this evidence should and should not be trusted at its current
@@ -600,6 +608,36 @@ All three pairs cleared the registered criterion, so the effect is not an artifa
 
 Three caveats belong with this result. We used SSC's `valid` split rather than its canonical train/test split — a download-size decision, and a real deviation from the corpus's benchmark protocol, though one that does not threaten the internal validity of a comparison in which both conditions see identical stimuli. One of ninety-six cells (a segregated run in the 12 v 5 pair) returned exactly zero; V retention was inside the validated band, so this is a genuine failure to bridge rather than the decay artifact described in Section 4.5, but it inflates that pair. Excluding it, the pair gives 14.98x (p = 6.0×10⁻²¹) — still far above the registered floor, so the zero cell is not load-bearing. Finally, an interrupted first execution was resumed from a per-cell cache in which sixty-two of ninety-six cells carry values rounded to one decimal place; re-running a cached cell from scratch reproduced it to 0.03 against a rounding bound of 0.05, a relative error near 10⁻⁵ on quantities of this magnitude, which cannot move a ratio of 11.61x or a p-value of 10⁻²⁰.
 
+### 4.14 A third-party boundary condition: where the penalty does *not* appear
+
+Every result above is ours. This section is not: it was measured independently, on physical hardware we have no access to, by Henry Shulayev Barnes at Catalyst Neuromorphic, and is reported here with his permission and at his attribution. It is the only measurement in this paper produced by someone other than the author, and it is a negative result. We include it because a boundary condition — a case where the effect is absent, and a mechanistic account of why — constrains the claim more usefully than another confirmation would.
+
+Catalyst's N4 architecture cannot express the central claim directly: structural plasticity was cut from its tapeout, so the comparison available was inference-only. It is also a substrate on which placement cannot affect accuracy at all, because spike delivery is exact and a neuron performs identical arithmetic wherever it sits. The only quantity placement moves is routed traffic, measured as **multicast fan-out** — the number of distinct cores a spiking neuron's events must be delivered to. The measurement was taken from the compiled delivery tables, so it is the mapping the hardware would actually execute rather than a simulation of one.
+
+The model is Catalyst's deployed 48-core SHD build: 1,024 recurrent adLIF hidden units plus 20 readout, 1,486,656 quantised connections across 1,724 distinct sources and 47 occupied cores — 84.2% of the dense matrix. Four placements were compared on the identical connection set: the compiler's own first-fit-by-fan-in placement, a round-robin interleave, contiguous blocks, and uniform-random assignment.
+
+At full density there is nothing for placement to do: every one of the 1,724 sources reaches all 47 occupied cores, with minimum, mean and maximum fan-out all exactly 47. The informative part is what happens under pruning.
+
+**Table 12.** Mean cores reached per source, N4 deployed model under magnitude pruning. Measured by Catalyst Neuromorphic, September 2026, and reproduced here with permission.
+
+| Sparsity | Edges | Deployed | Interleaved | Blocked | Random |
+|---|---|---|---|---|---|
+| 0% | 1,486,656 | 47.0 | 48.0 | 48.0 | 48.0 |
+| 50% | 730,934 | 45.8 | 47.6 | 47.5 | 47.4 |
+| 80% | 293,061 | 34.6 | 38.4 | 38.3 | 38.2 |
+| 90% | 148,512 | 23.9 | 26.6 | 26.6 | 26.5 |
+| 95% | 73,433 | 15.3 | 16.8 | 16.8 | 16.7 |
+| 98% | 29,627 | 8.5 | 9.2 | 9.1 | 9.2 |
+| 99% | 14,679 | 5.1 | 5.5 | 5.5 | 5.6 |
+| 99.5% | 7,363 | 3.0 | 3.3 | 3.1 | 3.3 |
+| 99.9% | 1,462 | 0.7 | 0.8 | 0.8 | 0.8 |
+
+Blocked, interleaved and random placements sit within 0.2 cores of each other at *every* sparsity level from 0% to 99.9%. A deliberately segregated arrangement — the one that costs 3.8x–4.2x on our benchmark — costs nothing measurable here. The deployed placement is modestly better than all three, but not because it exploits community structure: it is first-fit by fan-in, which correlates with which neurons happen to retain edges under magnitude pruning.
+
+**What this does and does not say.** It would be a serious misreading to take this as "placement does not matter on real hardware." The correct reading is the opposite in emphasis, and it is the collaborator's own: a backpropagation-trained recurrent network, even stripped to a thousandth of its weights, carries **no community structure for a placement to exploit**. Sparsity alone does not create locality. The placement penalty requires connectivity in which locality is already present — which a local structural-growth rule produces as a matter of course, and which magnitude pruning of a densely trained network does not produce at any sparsity level tested.
+
+This sharpens the scope of the paper's claim in a way we could not have established from our own simulations, and it answers a reviewer's most natural objection — that the effect is simply what any sparse network exhibits — with third-party measurement on hardware rather than with argument. It also bears directly on the baseline-fidelity question of Section 4.6: our segregated condition is a fair baseline on a plastic substrate and would be a strawman on a trained-and-pruned one. The two claims are consistent, and the distinguishing variable is the same one Section 4.6 identified — the structure of the connectivity graph, not the optimizer or the hardware.
+
 ---
 
 ## 5. Discussion
@@ -785,16 +823,34 @@ be over-interpreted from simulation alone, and the real-data result
 in Section 4.5 — while itself imperfect — is a better guide to
 expected real-world magnitude than the synthetic benchmarks.
 
-**Independent replication.** All results in this paper, including the
-geometry-ablation and real-data generalization tests, were produced
-by a single implementation and a single author. No independent
-reimplementation has yet replicated any of these findings. A
-collaboration is in progress to test the placement-learning
-interaction on physical neuromorphic hardware (Catalyst Neuromorphic
-N4), though the collaborator's current chip tapeout does not include
-structural plasticity, limiting near-term hardware validation to an
-inference-only comparison that cannot test the central claim
-directly.
+**Independent replication.** All results in this paper except
+Section 4.14 were produced by a single implementation and a single
+author. No independent reimplementation has replicated the central
+positive finding, and that remains the single largest gap in this
+work. The one third-party measurement we have — Catalyst
+Neuromorphic's N4 fan-out study, Section 4.14 — is a negative result
+that bounds the claim's scope rather than confirming it, and it could
+not test the central claim in any case: that chip's tapeout does not
+include structural plasticity, so the comparison available was
+inference-only. It should be counted as an independent *boundary
+condition*, not as independent corroboration.
+
+No result in this paper has been produced on hardware performing
+runtime structural plasticity, which is the substrate the entire
+claim concerns. We surveyed the available routes and report the
+outcome plainly, since it explains why: Intel's Loihi cannot express
+structural plasticity at all — its learning API operates on weight,
+delay and tag, with no synapse creation or destruction — and stock
+NEST's structural plasticity selects partners without any spatial or
+topological term, so neither can host this experiment regardless of
+access. SpiNNaker can, and has had distance-dependent structural
+plasticity in its maintained software stack since Bogdan et al.
+(2018). We note in advance, and before running anything, that
+SpiNNaker's candidate *selection* is uniform-random while only its
+formation *acceptance* is distance-dependent — one of the two
+mechanism channels identified in Section 4.10 — so a smaller effect
+than our simulations report is the correct prediction there, and we
+register it as such rather than retrofit an explanation afterwards.
 
 **Real-data result variance and scope.** The Section 4.5 real-data result was strengthened after initial drafting: a twelve-seed, twenty-distinct-sample-per-class replication directly tested and rejected the concern that four examples per class was too narrow a sample — five-fold more distinct data produced a statistically indistinguishable ratio. The remaining open question is not sample size but training-exposure regime: reported magnitude ranges from 5.1x to 8.2x depending on how long the network is exposed before readout, and segregated-condition outcomes remain intrinsically high-variance (60-70% relative) even at n=12. We consider the direction of this result — segregation harms real-data learning, substantially and reliably — solidly established; the precise magnitude should still be read as regime-dependent rather than as a single fixed number.
 
@@ -821,6 +877,19 @@ report both the strength of the evidence for it and the specific
 respects in which further validation, particularly independent
 replication and physical hardware testing, remains necessary before
 the finding should be considered fully established.
+
+---
+
+## Acknowledgements
+
+The fan-out measurements in Section 4.14 were designed, run and
+supplied by **Henry Shulayev Barnes (Catalyst Neuromorphic)**, on
+Catalyst's N4 hardware, and are reproduced here with his permission.
+He also identified the framing point that section now leads with — that
+the result constrains *when* the placement penalty applies rather than
+whether it is real — and independently raised the chance-ceiling caveat
+recorded in Section 4.12 before we stated it. The interpretation, and
+any error in it, remains ours.
 
 ---
 
@@ -857,6 +926,17 @@ the finding should be considered fully established.
 
 7. Cramer et al. (2022), reference 1 above, also releases the Spiking
    Speech Commands (SSC) corpus used in Section 4.13.
+
+8. Shulayev Barnes, H. "Multicast fan-out against placement, N4
+   48-core deployed model." Catalyst Neuromorphic, 1 September 2026.
+   Private communication, cited with permission (Section 4.14).
+
+9. Bogdan, P. A., Rowley, A. G. D., Rhodes, O., Furber, S. B.
+   "Structural Plasticity on the SpiNNaker Many-Core Neuromorphic
+   System." *Frontiers in Neuroscience* 12, 434 (2018).
+   doi:10.3389/fnins.2018.00434. [Cited in Limitations regarding
+   available hardware routes; note this is also prior art for
+   distance-constrained runtime synapse formation.]
 
 *Note: this reference list is incomplete relative to the full related-
 work discussion in Section 2. Citations for the cognitive-science
