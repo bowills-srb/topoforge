@@ -6,7 +6,7 @@
 
 The penalty is not confined to a baseline of our own construction: a faithful from-scratch reimplementation of SpiNeMap (a real mapping tool), given the connectivity graph it actually has at map time, is mechanistically in the same net-loss regime as our segregated baseline (−554 units of plasticity-attributable growth, vs. segregated's −727; p = 1.6×10⁻⁶ vs. the interleaved condition's +1462 gain) — not partway toward interleaved, as raw taught-mass numbers previously suggested. The same tool lands at interleaved (+1516 growth) when the to-be-learned associations are declared to it up front — so the harm comes from the graph the optimizer is given, not from wire-length optimization as such. See `src/experiments/exp38_spinemap_baseline.py` and the preprint's Section 4.6.
 
-**Real-data generalization:** the same penalty appears on real spike-encoded human speech (Spiking Heidelberg Digits). A 12-seed, adjacency-matched comparison shows a **5.1x–8.2x** penalty depending on training-exposure regime (8.22x, 95% CI [7.03x, 10.05x], at the validated regime; Welch p = 3.5×10⁻¹⁴). See `src/experiments/exp37c_real_data_scaled.py`. (This real-data metric is value-gated by spatially-local eligibility and is not affected by the raw-taught-mass correction above.)
+**Real-data generalization:** the same penalty appears on real spike-encoded human speech (Spiking Heidelberg Digits, 20 seeds) and replicates on a second corpus (Spiking Speech Commands, 3 independent class pairs) — **2.74x**, 95% CI [2.27x, 3.41x], Welch p = 9.8×10⁻¹¹, and **2.89x**, 95% CI [2.36x, 3.50x], respectively, closely overlapping. On held-out samples the plastic phase never saw, at matched pre-learning decodability, segregation also costs **6.94 percentage points** of classification accuracy (p = 0.012, n = 40). *Corrected 2026-09-04: earlier drafts reported 8.22x and 11.61x for these two corpora — roughly threefold inflated by a wiring-initialization bug (a fixed random draw shared identically across every "seed," discovered to be unusually unfavorable to the segregated condition specifically). The effect is not refuted, only smaller than first reported; the full account of the bug, why it evaded every check we ran, and the general lesson it left is in the preprint's Section 4.5 and Limitations.* See `src/experiments/exp37b_v2_real_data.py` (harness) and `src/experiments/exp53_wiring_draw_audit.py` (correction).
 
 Preprint: `[arXiv link pending]`
 Patent: Provisional filed, USPTO application #64/134,008 (08/14/2026)
@@ -43,7 +43,7 @@ Your placement CSV needs columns: `neuron_id, x, y, cluster_identity`. See `src/
 | `src/spatial.py` | Exact k-NN spatial grid, O(N) queries |
 | `src/sparse_state.py` | Lazy-decay pairwise state (the memory-efficient trick that makes N=100K+ tractable) |
 | `src/engine.py`, `engine_local.py`, `engine_fast.py` | The simulation core - LIF neurons, structural plasticity, RPE learning |
-| `src/experiments/` | All experiments (numbered through Exp 37c), each independently runnable |
+| `src/experiments/` | All experiments (numbered through Exp 54), each independently runnable |
 | `src/experiments/exp32b_benchmark.py` | The Placement-Learning Benchmark (PLB) - the headline result |
 | `neuromorphic_sandbox_report.md` | Original research report (Experiments 1-11) |
 | `neuromorphic_sandbox_addendum.md` | Addendum (Experiments 12-19d, audit results, revised synthesis) |
@@ -59,14 +59,14 @@ Your placement CSV needs columns: `neuron_id, x, y, cluster_identity`. See `src/
 
 ## Status
 
-Built by one person on a laptop, in active development. Experiments numbered through Exp 37c, 5-seed-minimum replication on primary claims (real-data replication now at 12 seeds), GRANITE audit passed on both the original dense engine and the sparse rewrite. Numba optimization and cloud-scale runs (N=10K-100K) planned next.
+Built by one person on a laptop, in active development. Experiments numbered through Exp 54; primary real-data claims run at 12-20 seeds; `audit_deployed.py` passes as the regression gate, and `audit.py`/`audit_engine.py` independently GRANITE both the dense engine and the sparse rewrite. A pinned-wiring-draw defect affecting every real-data experiment was found and corrected 2026-09; see the preprint's Limitations section for what it was and how it evaded earlier checks. Numba optimization and cloud-scale runs (N=10K-500K) are underway in a separate repo (`topoforge-scale`).
 
 ## Citing this work
 
 ```
 @misc{wills2026topoforge,
-  title={Placement Affects Learning: Spatial Topology as a First-Class
-         Design Variable for Plastic Neuromorphic Hardware},
+  title={Placement Determines Learnability: Local Connectivity as a
+         First-Class Design Variable for Plastic Neuromorphic Hardware},
   author={Wills, Bo},
   year={2026},
   note={Provisional patent filed, USPTO \#64/134,008},
