@@ -18,7 +18,9 @@ placing functionally distinct neuron populations in contiguous,
 wire-length-optimal blocks ("segregated" placement) produces a
 3.83x learning penalty (95% CI [3.67x, 3.98x]) relative to placement
 that interleaves
-those populations, at *identical* energy cost during frozen operation
+those populations — a ratio of *taught associative structure*, which we
+show below compresses substantially when converted into task
+capability — at *identical* energy cost during frozen operation
 (bit-identical, since the conditions differ only in which type sits at
 which position) and a 1.6% post-plasticity energy premium.
 We show this effect survives five independent stress tests: removal
@@ -71,7 +73,38 @@ little as 0.1% of its weights, segregated, interleaved and random
 placements are indistinguishable in routed traffic at every sparsity
 level. Sparsity alone does not create the locality the effect requires;
 the penalty applies to connectivity built by local structural growth,
-not to any sparse network. We report effect
+not to any sparse network.
+Three further results, each of which constrains the claim rather than
+extending it, complete the picture. The effect survives on a real
+connectome: run on the *Drosophila* mushroom body as actually wired
+(2,754 neurons, 9,571 measured synaptic connections, cell types and
+neurotransmitter identity from the FlyWire FAFB v783 release), with all
+three arms occupying the same real coordinates so that adjacency is
+matched exactly, segregated placement costs 7.91x the taught structure
+of interleaved (95% CI [5.55, 10.89], Section 4.17) — and the same
+connectome independently confirms the locality this model assumes, with
+78.6% of connected pairs within one combined arbor radius against 15.0%
+of random pairs (Section 4.16). Against that, a single bit of
+per-connection state — whether a connection slot was rewired in the
+previous epoch — recovers roughly half the segregation penalty under
+task reversal, narrowing it from 5.66x to 2.76x, which is a cheap
+partial fix that argues against our own recommendation and is reported
+as such (Section 4.18). Most consequentially, we tested directly whether
+taught structure is a valid proxy for decoded capability and it
+**failed**: a within-condition correlation of +0.361 on discovery seeds
+did not replicate on forty fresh disjoint seeds (−0.140, 95% CI [−0.437,
++0.247]), and the two placements do not lie on a common
+structure-capability curve (2.19 SD extrapolation error). Neither a
+nonlinear readout nor an unbounded metric rescues that result. What
+survives is a between-condition exchange rate — roughly 4.2x of
+structure buys 1.31x of capability, a 3.2x compression, instrument-robust
+at 1.24x–1.36x — which describes central tendency only and leaves 96% of
+per-network variance unexplained (Section 4.19). Readers should
+therefore treat every structural ratio in this paper as a structural
+ratio: the directional claim that segregation costs task performance is
+measured and holds (6.94 percentage points, p = 0.012), but the large
+structural multipliers do not transfer to capability at anything like
+their stated magnitude, and we do not claim they do. We report effect
 sizes, statistical tests,
 and — in a dedicated Limitations section — the specific respects in
 which this evidence should and should not be trusted at its current
@@ -721,6 +754,111 @@ Pre-learning decodability is now matched to 0.50 points. The plasticity-attribut
 
 ---
 
+### 4.16 Are this paper's two core assumptions true of a real brain?
+
+Every result above rests on two modelling choices never checked against biology: that structural-plasticity deposits are confined to spatially local pairs, and that placing functionally different neurons near one another is what makes cross-type association possible. Both are assumptions. The FlyWire FAFB v783 release (Dorkenwald et al. 2024) — a complete adult *Drosophila* brain, every synapse located, every neuron typed and assigned a neurotransmitter — is the one substrate on which they can be measured rather than argued. We restrict to the central brain (52,446 neurons, 1,259,821 connected pairs), excluding the optic lobe, whose retinotopic lattice would dominate any whole-brain average.
+
+**What this is not.** This is a descriptive measurement of one brain, not a placement experiment: a fly cannot be rearranged and re-run, so nothing in this section tests the causal claim. It is a single dataset without pre-registration, and we treat it one notch below the numbered confirmatory tests above. Two measurement caveats found by its own audit are worth stating because both would have biased the result in the direction we wanted: the release's single representative point per neuron sits a median 49.7 um from that neuron's true synapse centroid, about 2.1 arbor radii, so anything measured on representative points is measured through that blur; and `connections.csv` carries one row *per neuropil*, so 3,869,878 rows cover only 2,700,513 pairs, and row-counting silently overweights the sprawling multi-neuropil pairs that argue *against* locality.
+
+**Locality holds.** Connection probability, normalised by how many neuron pairs exist at each separation, falls monotonically by more than three orders of magnitude: 71.7 (relative units) at 0–5 um to 0.015 at 300–500 um. Because a fly neuron is not a point — median radius of gyration 23.4 um against a brain roughly 900 um across — we repeat the measurement in scale-free units, dividing separation by the two neurons' combined arbor radius, and the monotone fall persists (16.4 below a quarter radius to 0.007 at 5–10 radii). 78.6% of connected pairs sit within one combined arbor radius, against 15.0% of randomly drawn pairs. The locality our rule encodes is a property of a real connectome.
+
+**Type clustering is real, and does not cost cross-type adjacency.** Of a neuron's nearest neighbours, the fraction sharing its label exceeds a position-shuffled null by 2.28x for cell class and 2.01x for super-class: real brains *do* cluster by function. Read naively, that is the objection a reviewer should raise — brains segregate and learn fine. The separation of connected pairs, split by whether the partners share a type, answers it. There is no cost: median 54.7 um within class against 58.0 um across class, and in arbor-radius units 0.599 against 0.593 — indistinguishable. Across neurotransmitter identity, cross-type partners are if anything *closer* (53.7 um against 59.0 um). The fly clusters by class at coarse scale while keeping functional partners adjacent at the scale plasticity operates on. Clustering by type is only a problem when it costs cross-type adjacency, and in this brain it does not.
+
+---
+
+### 4.17 Generalization test 7: the comparison run on a real connectome
+
+Every placement result above is measured on synthetic connectivity — a random draw over a chosen degree distribution. Section 4.6 answered "is this an artifact of *our* baseline?" by reimplementing a published tool, but that tool's graph is still a model. This section runs the comparison on the *Drosophila* mushroom body as actually wired: 2,754 right-hemisphere neurons, 9,571 measured synaptic connections, cell types from Schlegel et al. (2024), and excitatory/inhibitory identity read from measured neurotransmitter rather than drawn from a coin.
+
+The mushroom body is the appropriate structure rather than a convenient one. It is the fly's associative learning centre, and its architecture is the biological instance of what this paper models: a large sensory population (2,591 Kenyon cells) forming associations onto a small output population (48 MBONs), gated by a dopaminergic reward channel (115 DANs), with cross-type edges outnumbering within-type edges roughly 8:1. The reward-prediction-error rule used throughout this paper is a model *of* this circuit.
+
+**Two neurons are excluded, and it matters.** The 2 MBIN-class (APL-like) cells carry 7,782 of the original 17,512 edges — 44% — because each arborises across the entire mushroom body and contacts thousands of Kenyon cells. A neuron touching half the structure has no meaningful position, and the point-neuron abstraction this paper's physics requires is simply false for it. Including them would let a single unplaceable cell dominate the quantity being measured. Excluded, with disclosure.
+
+**Adjacency matching is exact here, for once.** This project's worst early error compared placements whose cross-type adjacency counts differed by 57x, so the ratio measured opportunity rather than arrangement. That failure mode is structurally impossible in this design: all three arms use *the same set of positions* — the real neurons' real coordinates — and differ only in which neuron is assigned to which position. Point set, density, neighbour counts and total adjacent-pair count are therefore bit-identical across arms; only the type arrangement moves, from 1.70% cross-type adjacency under segregation to 11.04% under interleaving at identical total adjacency. The connectivity graph is fixed and travels with the neurons, so the logical-versus-global wiring defect of Section 4.1 cannot arise either.
+
+**Table 14.** Taught mass on real mushroom-body wiring (KC↔MBON edges surviving the plastic phase), ten seeds.
+
+| Placement | Taught | Retained | Energy |
+|---|---|---|---|
+| Real (measured positions) | 269.9 ± 8.9 | 3.6% | 3.258e4 |
+| Segregated | 115.3 ± 33.4 | 1.5% | 3.123e4 |
+| Interleaved | 911.5 ± 449.7 | 12.2% | 6.037e4 |
+
+Interleaved/segregated = **7.91x**, 95% CI [5.55, 10.89], Welch p = 3.3×10⁻⁴, d = 2.50. The placement effect survives contact with real connectivity.
+
+**The third arm is reported, and explicitly not used as evidence.** The fly's own layout sits 19% of the way from segregated to interleaved — near the segregated end. We do *not* report this as "the fly segregates and learns anyway," because the real arm is the one this model distorts most. MBONs and DANs extend processes across the whole structure and meet Kenyon cells in the lobes, so their *synapses* are adjacent while their *centroids* are far apart, and a point-neuron model scores that as segregated by construction — the same failure that forced the two APL-type cells out of the substrate entirely. What that arm shows is a limit of the abstraction, not a fact about the fly. Only the segregated-versus-interleaved contrast, in which both arms are equally point-like, is interpretable here.
+
+---
+
+### 4.18 Task change, and a one-bit flag that partially rescues segregation
+
+Everything above measures learning an association from scratch. Nothing measures *re*-learning, and that gap matters commercially more than the original claim does: if a mapping is trained once and frozen, structural plasticity in silicon is unnecessary — train offline and ship weights. The reason to want it is that the task will change after deployment. "Segregated placement adapts worse" is therefore a sharper argument than "segregated placement learns less," and it had not been tested.
+
+**A rule-capacity check first, which refuted its own hypothesis.** Before testing adaptation we asked whether the rule's three decaying pair tables are a ceiling as well as a floor, adding three optional tables: firing order, a slow consolidating value table, and a per-slot survival counter. Pre-registered at ≥10% change with non-overlapping CIs. All four arms returned **no effect** on taught mass (≤0.2%) and the placement ratio never moved (3.84x to 3.81x–3.84x). One number moved unpredicted: with the survival counter active, reversal re-learning rose from 221.1 to 368.5, +66.7%.
+
+We treated that as a lead rather than a result — it sat in a tertiary metric and was noticed because it was the one number that moved, the textbook forking path. A 20-seed replication with four bonuses of *identical magnitude* differing only in what they know separates the mechanism cleanly, and refutes the obvious explanation. Our prime suspect was tie-breaking: the retention score is heavily tie-degenerate, so any per-slot perturbation should rotate which connections are cut. A bonus drawn from a dedicated random generator, carrying zero information, would then work as well as the real one. It did not (+2.1%, CIs overlapping).
+
+**Table 15.** Reversal re-learning by retention bonus, 20 seeds. All bonuses identical in magnitude.
+
+| Bonus | Reversal re-learning | vs none | CIs separated |
+|---|---|---|---|
+| none | 212.4 | — | — |
+| graded (survival length) | 359.1 | +69.0% | yes |
+| **binary (rewired last epoch)** | **342.9** | **+61.5%** | **yes** |
+| random (no information) | 216.8 | +2.1% | no |
+| inverted (protects young slots) | 208.5 | −1.8% | no |
+
+The mechanism is **recency**, not survival length and not tie-breaking: knowing only "was this slot rewired last epoch" suffices, graded accumulation adds ~7 points, and protecting *young* slots does nothing. Cut-set churn confirms the route — consecutive-epoch overlap rises from 0.004 to 0.248 and the number of distinct slots ever cut falls from 8,196 to 5,788. The flag converts continuous churn into a one-epoch admission test. Plastic-phase taught mass is unchanged across all five arms (≤0.6%), so this is an adaptation effect, not a general potency change.
+
+**The interaction test, and a registered prediction missed in the direction that costs us.** Adding the segregated arm, we registered the placement ratio on reversal re-learning as the primary quantity and predicted it would **widen** with a better retention policy: interleaved has cross-type candidate pairs available to lock in after a reversal and segregated cannot form them at all, so we expected the flag to have less to protect in the segregated condition.
+
+**Table 16.** Reversal re-learning by placement and flag, 20 seeds.
+
+| Placement | flag off | flag on | gain | 95% CI |
+|---|---|---|---|---|
+| Segregated | 37.5 | 124.2 | 3.31x | [2.32, 5.02] |
+| Interleaved | 212.4 | 342.9 | 1.61x | [1.46, 1.80] |
+
+The placement ratio **narrows**, from 5.66x [4.25, 8.29] to 2.76x [2.26, 3.54]. A one-bit retention flag buys back roughly half the segregation penalty under task change. This cuts against this paper's own claim and we report it first rather than last. First-learning taught mass is unaffected by the flag (≤0.6% in both placements), so this is specific to adaptation. One caveat we have not resolved: the two scales disagree in sign. "The gap narrowed" is a claim on the *multiplicative* scale; the same four cells read additively say the opposite, and neither reading is marginal.
+
+**What this does not establish, and a failed attempt to establish it.** Both endpoints here are structural. We attempted the accuracy analogue on the real-data harness and could not measure it: because a freely-fitted decoder simply re-weights when the network swaps which cluster carries which class, the primary had to be a *fixed* mapping-aware readout, and that readout's pre-registered manipulation check failed outright — post-training mapping-aware accuracy was 49.8% and 50.0% (chance) in the two placements while the imported ridge control read 85–95%. There was no learned mapping to reverse, so the reversal comparison was uninterpretable and we report it as a harness result rather than a finding. **Consequently nothing in this section may be stated in performance terms.** The rescue result is a structural result about a structural endpoint.
+
+---
+
+### 4.19 Is taught structure a valid proxy for capability? A pre-registered test, and it failed
+
+Section 4.15 measured the accuracy endpoint once and found a 3.59x structural ratio worth 1.079x in accuracy terms. Every headline in this paper is a structural ratio; not one is a capability ratio. This section asks the question that gap implies — does taught structure predict capability at all, and at what exchange rate — and reports a negative answer.
+
+**First, ruling out the instrument.** The obvious excuse for Section 4.15's shrinkage is that its endpoint is too blunt: the ridge readout computes a continuous decision value and discards it through a sign function, leaving 120 binary outcomes at 0.83-point resolution, so the entire 6.94-point effect is about eight samples crossing a boundary. Scoring the *same fitted readout* continuously raises resolution fourfold (239/240 distinct cells against accuracy's 54/240) and we registered the prediction that the effect would grow. **It did not.** Continuous d = 0.590, 95% CI [0.158, 1.059], against accuracy's d = 0.575 [0.171, 0.961]; paired difference +0.015, 95% CI [−0.291, +0.325]. Dichotomisation was not the bottleneck, Section 4.15's claim-limiting reading is unchallenged, and our prediction is recorded as a miss. The primary agrees across three baselines (d = 0.590 / 0.691 / 0.792), so the frozen arm is not load-bearing.
+
+**A result worth keeping, from the same sweep.** The ridge regulariser controls readout *capacity*, and the claim is that placement determines what the *network* can learn — so a sufficiently powerful readout should do the work the network did not. That makes a prediction, and it holds: sweeping the regulariser across eleven values, the placement gap grows monotonically as the readout weakens, from d = 0.445 to d = 0.989 (Spearman ρ = +1.000). Segregated's absolute decodability collapses across that sweep (R² 0.368 → 0.183) while interleaved's holds (0.435 → 0.400). The decoded effect size is a property of readout capacity with a predicted direction, not a fixed fact about the physics — and the direction is the hardware-relevant one, since a cheap on-chip readout is the weak-decoder case.
+
+**The proxy test.** The quantity of interest is the *within-condition* correlation between taught structure and held-out decodability: among networks of the same placement, differing only by seed, does more taught structure mean better decoding? Pooling both placements is nearly guaranteed to succeed and would merely re-measure the placement difference already known (pooled r = +0.42 on the first block, and it is not the test). Because the within-condition estimate had already been computed post hoc (r = +0.361), we split the experiment: forty discovery seeds, which are descriptive and prove nothing, and forty **fresh, disjoint** confirmation seeds carrying the pre-registered bar. That bar was deliberately shrunk to r ≥ +0.20 with a bootstrap CI excluding zero, because a correlation found by looking is biased upward.
+
+**Table 17.** Within-condition structure-capability correlation. Confirmation seeds carry the registered test.
+
+| | discovery (descriptive) | confirmation (registered) |
+|---|---|---|
+| Segregated, own r | +0.288 (p = 0.071) | +0.362 (p = 0.022) |
+| Interleaved, own r | +0.475 (p = 0.002) | **−0.509 (p = 0.001)** |
+| Within-condition partial r | +0.361 [+0.167, +0.545] | **−0.140 [−0.437, +0.247]** |
+
+**The registered test failed.** The correlation did not replicate; it inverted. Taught structure's coupling to decoded capability is **not established**, and the structural headlines throughout this paper measure a quantity whose relationship to what a user of the hardware would care about is unproven. We state that plainly because it is the finding that costs this work the most.
+
+A second registered test failed alongside it, and we rank it as the more important of the two. Fitting the structure-capability relation on one placement and extrapolating to the other fails asymmetrically: interleaved → segregated misses by 2.19 SD (0.708 predicted against 0.322 observed) while segregated → interleaved passes at 0.60 SD. **The two placements do not lie on a common curve**, so placement affects capability partly by a route that taught mass does not capture. The wiring count may be a marker travelling alongside the mechanism rather than the mechanism itself.
+
+**What survives.** The exchange rate replicated: 4.22x of structure buys 1.31x of capability (95% CIs [3.52, 5.14] and [1.09, 1.61]) — a 3.2x compression, against discovery's 3.59x → 1.24x. This is a *between-condition central tendency* and explicitly not a within-condition law. Two limits bound how it may be used. It is not decoder-dependent — the within-condition coupling is flat-to-negative across all eleven regulariser settings (−0.114 to −0.246), so it cannot be tuned into existence. And it explains almost nothing at the level of an individual network: pooled R² = 0.043, within-condition R² = 0.020, leaving 96–98% of seed-level variance in capability unexplained by taught structure. It describes central tendency across a 4.2x structural range and must not be presented as a per-network predictor.
+
+**Two instrument checks that could have excused the failure, and did not.** The failure is not uniform — segregated replicated positive while only interleaved inverted — so we tested the two ways the instrument could have been blind, re-scoring the *same cached features* under three readouts and four metrics with no new simulation, gated on reproducing the published statistics exactly.
+
+*Linearity is not the limitation.* Every capability number in this paper comes from a linear readout, so nonlinearly decodable information would be invisible by construction. An RBF kernel-ridge readout decodes materially better in absolute terms (ΔR² 0.437/0.567 against ridge's 0.322/0.420, roughly 35% more signal extracted) and the coupling still fails, at partial r = −0.222. All twelve readout × metric combinations return a negative partial r; none approaches +0.20. A sharper instrument sees more of everything except this.
+
+*The saturation shape is not a metric artifact — but only half of it is real.* The primary metric is bounded, and a bounded metric can manufacture apparent diminishing returns. Under *unbounded* separation metrics the interleaved arm's negative curvature persists at full strength (d′ t = −4.99, logit-AUC t = −5.37, holding across all three readouts), so the flattening is real. The segregated arm's apparent curvature, by contrast, was partly an artifact: significant only under the bounded metric with the linear readout (p = 0.028) and not under any unbounded metric (p = 0.08–0.16). Segregated sits on a clean rising limb with no detectable turnover. The cross-condition extrapolation fails under every instrument (1.56–2.80 SD) and the kernel readout makes the asymmetry *stronger*. The exchange rate is instrument-robust at 1.24x–1.36x.
+
+**A hypothesis, labelled as one.** These results are consistent with a coupling that is real but *saturating*: segregated on the rising limb where wiring is the binding constraint, interleaved at or past the knee where it is not and a linear correlation is therefore noise-dominated. That would explain both the sign flip and the asymmetric extrapolation, since fitting the flat regime and extrapolating downward necessarily overshoots. We flag two things against over-reading it. The **knee is well supported; the downslope is not** — the high-structure half correlates at −0.431 (p = 0.005) but the binned means do not corroborate a decline (the top quartile sits *above* the third), so the defensible shape is rise-then-flatten rather than an inverted U. And one observation the hypothesis does not explain: restricted to the structural range the two blocks share, they still disagree (+0.587 [+0.322, +0.747] against −0.064 [−0.278, +0.147], non-overlapping), so sampling range is not a complete account. This hypothesis was formed after seeing a failed test and is offered as something to pre-register — on curvature and knee location, not on a linear correlation — rather than as a finding. Sections 4.15 and 4.19's registered verdicts stand as reported regardless of how it resolves.
+
+---
+
 ## 5. Discussion
 
 Taken together, Sections 4.3-4.5 constitute three independent,
@@ -800,6 +938,52 @@ density tested but outperforms uniform interleaving on sparse
 fabrics, since it co-locates the populations that must associate
 rather than mixing all types indiscriminately.
 
+**What the newest sections change about how this claim should be stated.**
+Sections 4.16–4.19 were designed to attack this paper's own framing rather
+than extend it, and two of them succeeded. The claim that needs revising is
+not *whether* placement matters — Section 4.17 shows the effect on a real
+connectome at exact adjacency matching, Section 4.16 grounds the locality
+assumption it depends on in the same brain, and Section 4.15's accuracy
+measurement stands — but *how the magnitude should be described*. Section
+4.19 tested the implicit bridge between this paper's structural headlines
+and the capability a user would experience, and the pre-registered test
+failed: within a placement, networks that grow more taught structure are
+not reliably better decoders, and the two placements do not lie on a common
+structure-capability curve. The instrument was not at fault; a nonlinear
+readout that extracts roughly 35% more signal fails the same test slightly
+harder.
+
+We therefore think the defensible form of this paper's claim is
+mechanistic rather than multiplicative. What the evidence supports is that
+**segregated placement leaves a network in the regime where reachable
+correlated structure is the binding constraint on what it can learn, and
+interleaved placement moves it out of that regime.** On that reading the
+structural ratios in Sections 4.1–4.13 are the right measurement of the
+constraint's severity — they are measuring how much associative structure
+the local rule is prevented from building — while the compressed accuracy
+figures of Sections 4.15 and 4.19 are the right measurement of what
+relieving the constraint buys once other factors are also limiting. The
+two are consistent, and the saturation hypothesis offered in Section 4.19
+would explain why, though it is a hypothesis and we have registered what
+would test it. This framing also predicts the readout-capacity result: a
+constraint on network-supplied separability should matter most when the
+decoder cannot compensate, which is exactly the monotone dependence
+observed (ρ = +1.000).
+
+Two consequences follow for how this work should be cited. First, the
+structural multipliers should not be quoted as performance claims. The
+between-condition exchange rate of roughly 4.2x structure to 1.31x
+capability is the number to quote when a capability statement is wanted,
+with the explicit caveat that it describes central tendency and explains
+almost none of the per-network variance. Second, Section 4.18's one-bit
+recency flag is a genuine, cheap partial mitigation that cuts against the
+strong form of our recommendation, and anyone designing a plastic
+substrate should know that a single bit of per-connection state recovers
+roughly half the adaptation penalty before they accept a placement
+constraint to avoid all of it. That result is structural only, and the
+attempt to measure its accuracy analogue failed its own manipulation
+check, so it is a lead for a mitigation rather than an established one.
+
 ### 5.1 Practical recommendations for mapping tool design
 
 The results in Sections 4.1-4.11 support a concrete, actionable set of design rules for anyone building or configuring a mapper for plastic neuromorphic hardware, stated here as a synthesis rather than scattered across individual findings.
@@ -815,6 +999,10 @@ The results in Sections 4.1-4.11 support a concrete, actionable set of design ru
 **Treat placement as a one-time, front-loaded decision.** We tested three physical self-organization mechanisms by which a substrate might, in principle, correct a poor initial placement on its own — value-driven migration, a wide independent sensing signal, and the same with simulated-annealing-style exploration — and none rescued a segregated starting configuration (Section 4.10 references this thread; full detail in the project's supplementary record). Structural (synaptic) plasticity is real and already does substantial work in this substrate, but physical placement is not something it repairs for you. A mapper's placement decision should be treated as final at map time, not deferred to runtime adaptation.
 
 **There is no material energy tradeoff to weigh against any of this.** The energy cost of the best-learning placements is at most 1.6%, and the association-aware condition is energy-neutral-to-better than every alternative tested (Section 4.9). An objection along the lines of "correct placement costs too much power" is not supported by anything measured in this paper.
+
+**Budget one bit per connection slot for recency before constraining placement further.** Section 4.18 shows that a single bit recording whether a connection slot was rewired in the previous epoch recovers roughly half the segregation penalty under task reversal (5.66x to 2.76x), by converting continuous churn into a one-epoch admission test. It is the cheapest intervention identified anywhere in this paper and it is not a placement change at all. Two qualifications: the result is structural, and the attempt to confirm it in accuracy terms failed its own manipulation check, so it should be treated as a promising mitigation to test rather than a solved problem; and it helps *adaptation* specifically — first-time learning is unaffected, so it does not substitute for good placement on a substrate whose task never changes.
+
+**Do not size a plasticity-aware placement constraint from this paper's structural ratios.** Section 4.19 establishes that taught structure does not predict decoded capability within a placement condition, and that the between-condition conversion compresses roughly 4.2x of structure into 1.31x of capability. A mapper's constraint budget should be set from the coverage statistic (which is placement-computable and predicts ordering reliably) and validated against a task endpoint, not derived from a structural multiplier. Treating a 4x structural figure as a 4x capability figure would over-provision the constraint by roughly a factor of three.
 
 ---
 
@@ -891,9 +1079,13 @@ will cost.
 **Task and scale realism.** All synthetic results (Sections 4.1-4.4
 and 4.12) use hand-designed stimulus patterns at N=900-5,000.
 Experiment 33's architecture proportions were drawn from a published
-hardware design, but its input remained synthetic. Only Sections 4.5
-and 4.13 use real data, and at a substantially smaller scale (N=200)
-than the synthetic benchmarks.
+hardware design, but its input remained synthetic. Sections 4.5 and
+4.13 use real input data, at a substantially smaller scale (N=200) than
+the synthetic benchmarks; Sections 4.16-4.17 use real *connectivity*
+(N=2,754 for the placement comparison) but synthetic stimulus. No
+experiment in this paper combines real connectivity with real input
+data, so the two forms of realism have been tested separately rather
+than together.
 
 **Effect size interpretation.** As stated in Section 3.4, several
 reported effect sizes (Cohen's d > 70 in Section 4.1) are far larger
@@ -943,6 +1135,14 @@ register it as such rather than retrofit an explanation afterwards.
 
 **Section 4.11's partial-knowledge model and its own near-miss.** Partial knowledge was operationalized as a continuous *weight* on the true cross-type affinity SpiNeCluster is given, not as certain knowledge of a *subset* of the true association edges — a mapper that is fully confident about a fraction of the true associations and blind to the rest was not tested, and could plausibly behave differently (closer to the synthetic "population" endpoint applied to a smaller effective graph than to a uniformly-diluted one). The real-data version of this section also stands as a within-paper demonstration of the risk it warns about elsewhere: an initial single-placement-seed run appeared to overturn the synthetic threshold finding outright, and only a second, then third, more heavily-seeded rerun showed that result was placement-search noise, not a real effect. We report the corrected result and the process by which it was reached rather than only the final number, since the intermediate false positive is itself informative about how much placement-seed averaging this class of experiment needs before a result should be trusted.
 
+**The proxy this paper's headlines depend on is not established, and this is now the largest interpretive limitation in the work.** Every headline figure in Sections 4.1–4.13 is a ratio of taught associative structure. Section 4.19 tested whether that quantity predicts decoded capability and the pre-registered test failed on fresh disjoint seeds, with the within-condition correlation inverting rather than merely shrinking. A companion registered test showed the two placements do not lie on a common structure-capability curve (2.19 SD extrapolation error), which means placement influences capability partly through a route taught mass does not capture — the structural measure may be a marker travelling alongside the mechanism rather than the mechanism itself. We were unable to excuse this on instrumental grounds: a nonlinear kernel readout extracting roughly 35% more absolute signal fails the same test slightly harder, and all twelve readout × metric combinations tested return a negative coefficient. What remains defensible is the directional accuracy result of Section 4.15 and a between-condition exchange rate that explains 2–4% of per-network variance. Readers should treat the structural multipliers as measurements of how severely the local rule is constrained, not as predictions of task outcome, and should not derive engineering margins from them. We have left the paper's structural figures in place rather than restating them in capability terms precisely because no defensible conversion exists at the per-network level.
+
+**The saturation account of that failure is post hoc, partly unsupported, and incomplete.** Section 4.19 offers a saturating coupling as the explanation, and it was constructed after seeing the failure — the same forking path this paper has been caught by twice before (Sections 4.11, 4.18). Two specific weaknesses are disclosed there and repeated here because they bound what the hypothesis may be used for. The knee is supported across all three readouts and all four metrics including unbounded ones; the *downslope* is not, resting on a high-half correlation of −0.431 that the binned means contradict, so any claim that excess structure is actively harmful is unsupported. And the hypothesis does not explain the residual: restricted to the structural range the two seed blocks share, they still disagree with non-overlapping intervals, so sampling range is not a complete account and some difference between blocks remains unidentified. Nothing in this paper should be cited as evidence for a saturating structure-capability law; the correct status is an untested hypothesis with a registered test specified.
+
+**The real-connectome test is one dataset, and its central abstraction is false for part of it.** Section 4.17's 7.91x is measured on a single structure in a single individual brain at ten seeds, without pre-registration, and inherits the single-implementation caveat applying to everything here. Its abstraction fails conspicuously for some of its own neurons: two APL-type cells carrying 44% of the mushroom body's edges had to be excluded because a neuron arborising across the entire structure has no meaningful point position, and the same failure makes the third ("real fly layout") arm uninterpretable — MBONs and DANs have adjacent *synapses* and distant *centroids*, which a point-neuron model necessarily scores as segregated. The segregated-versus-interleaved contrast is sound because both arms are equally point-like, but the measurement is therefore silent on what the fly's own arrangement achieves, and we draw no conclusion from it. Section 4.16's supporting measurements are descriptive, unregistered, and measured through a representative-point blur of about 2.1 arbor radii that the section quantifies. The obvious replications — the male CNS and hemibrain connectomes — have not been run. We also note that licence terms for redistribution of the FAFB v783 derivatives have not been confirmed; this affects what may be published alongside the paper, not the analysis.
+
+**The recency mitigation is structural only, and its two scales disagree.** Section 4.18's finding that one bit recovers half the segregation penalty is measured entirely on a structural endpoint. The attempt to confirm it in accuracy terms failed its own pre-registered manipulation check — the fixed mapping-aware readout sat at chance in both placements — so there is no performance evidence for it at all, in either direction. Separately, the multiplicative and additive readings of the same four cells disagree in sign, and we have not resolved which is the appropriate scale for an adaptation claim. The result is reported because it argues against our own recommendation and suppressing it would be worse, but it should be read as a lead for a mitigation rather than a mitigation.
+
 ---
 
 ## 7. Conclusion
@@ -954,24 +1154,53 @@ learning rule for our own, to replacing our structural-plasticity rule
 outright with a published model containing no correlation, value, or
 reward term, and — with important caveats disclosed above — to
 replacing synthetic stimulus patterns with real human speech, on two
-independent speech corpora. It is measurable not only in connectivity
-but in task performance: segregated placement costs held-out
-classification accuracy at matched pre-learning decodability
-(Section 4.15). Its magnitude is smaller than earlier drafts of this
-paper claimed — a pinned random draw inflated the real-data figures
-roughly threefold, and the corrected values are reported throughout —
-and a third-party measurement on physical hardware (Section 4.14)
-bounds where it applies at all: the penalty requires connectivity that
-already carries locality, and is absent in a trained-and-pruned network
-that has none. What survives correction is a directional effect that is
-large, consistent across rules and corpora, mechanistically explained,
-and reproduced by a real deployed mapping tool.
+independent speech corpora, and to replacing synthetic connectivity
+with a measured one — the effect appears at 7.91x on the *Drosophila*
+mushroom body as actually wired, at exactly matched adjacency, in a
+brain whose own connection statistics independently confirm the
+locality the mechanism requires (Sections 4.16–4.17). It is measurable
+not only in connectivity but in task performance: segregated placement
+costs held-out classification accuracy at matched pre-learning
+decodability (Section 4.15). Its magnitude is smaller than earlier
+drafts of this paper claimed — a pinned random draw inflated the
+real-data figures roughly threefold, and the corrected values are
+reported throughout — and a third-party measurement on physical
+hardware (Section 4.14) bounds where it applies at all: the penalty
+requires connectivity that already carries locality, and is absent in a
+trained-and-pruned network that has none.
+
+The claim's correct *form*, however, is narrower than the one this
+paper's headline figures invite, and we state it in the form the
+evidence now supports. Segregated placement leaves a network in the
+regime where reachable correlated structure is the binding constraint
+on what it can learn; interleaved placement moves it out of that
+regime. The structural ratios reported throughout measure the severity
+of that constraint, and they are large, consistent across rules,
+corpora and a real connectome, mechanistically explained, and
+reproduced by a deployed mapping tool. They are not capability ratios,
+and a pre-registered test of whether they can be treated as one failed
+(Section 4.19): within a placement, taught structure does not reliably
+predict decoded capability, the two placements do not lie on a common
+curve, and neither a nonlinear readout nor an unbounded metric
+rescues the result. What converts between the two is a
+between-condition exchange rate compressing roughly 4.2x of structure
+into 1.31x of capability, which describes central tendency and leaves
+almost all per-network variance unexplained. A single bit of
+per-connection state, meanwhile, recovers about half the penalty under
+task change (Section 4.18) — a cheap partial mitigation that argues
+against the strongest reading of our own recommendation.
+
 We believe this constitutes a genuine, previously
 unaddressed design variable for neuromorphic hardware mapping, and we
 report both the strength of the evidence for it and the specific
 respects in which further validation, particularly independent
 replication and physical hardware testing, remains necessary before
-the finding should be considered fully established.
+the finding should be considered fully established. The
+structure-to-capability link is now the most important of those gaps:
+until it is characterised, the honest statement of this work's
+contribution is that placement determines how severely a local
+plasticity rule is constrained, and that this constraint has a
+measured, directional, and comparatively modest cost in task terms.
 
 ---
 
@@ -1032,6 +1261,18 @@ any error in it, remains ours.
    doi:10.3389/fnins.2018.00434. [Cited in Limitations regarding
    available hardware routes; note this is also prior art for
    distance-constrained runtime synapse formation.]
+
+10. Dorkenwald, S., Matsliah, A., Sterling, A. R., Schlegel, P., et al.
+    "Neuronal wiring diagram of an adult brain." *Nature* (2024).
+    [FlyWire FAFB v783 release; substrate for Sections 4.16-4.17.
+    Author list truncated — the consortium paper has several hundred
+    authors; verify the canonical citation form and volume/page before
+    submission.]
+
+11. Schlegel, P., Yin, Y., Bates, A. S., et al. "Whole-brain annotation
+    and multi-connectome cell typing of *Drosophila*." *Nature* (2024).
+    [Source of the cell-type and neurotransmitter annotations used in
+    Sections 4.16-4.17. Same verification caveat as reference 10.]
 
 *Note: this reference list is incomplete relative to the full related-
 work discussion in Section 2. Citations for the cognitive-science
